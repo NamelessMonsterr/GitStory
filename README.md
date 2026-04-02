@@ -217,9 +217,3 @@ It is a repository reasoning tool:
 - Python 3.9+
 - Git CLI available on `PATH`
 - Local repository access or piped `git log` input
-
----
-
-## License
-
-MIT
