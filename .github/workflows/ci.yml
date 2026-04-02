@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+          pip install -e .
+
+      - name: Run pytest
+        run: python -m pytest tests -q -p no:cacheprovider
+
+      - name: Run master test runner
+        run: python tests/run_all_tests.py
+
+      - name: Smoke CLI help
+        run: |
+          python main.py --help
+          gitstory --help
+
+      - name: Smoke CLI stdin mode
+        shell: bash
+        run: |
+          printf '%s\n%s\n' \
+            'abc123|alice|alice@example.com|1704067200|2024-01-01T10:00:00+05:30|initial setup' \
+            $'12\t0\tREADME.md' \
+            | python main.py --stdin --tone professional > /tmp/gitstory-report.md
+          test -s /tmp/gitstory-report.md

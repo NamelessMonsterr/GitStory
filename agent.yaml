@@ -1,0 +1,60 @@
+name: GitStory
+version: 1.2.0
+description: >
+  Repository Intelligence Engine — analyzes Git history to detect development
+  phases, infer developer intent, assess risk patterns, and generate rich
+  narratives that explain WHY a codebase evolved the way it did.
+
+author: GitStory Team
+license: MIT
+
+personality: SOUL.md
+constraints: RULES.md
+
+entry_point: main.py
+
+skills:
+  - name: deep-history-analysis
+    path: skills/deep_history_analysis
+    description: Parses git logs, groups commits into development phases, detects frequency/size/change patterns.
+    priority: 1
+
+  - name: intent-inference
+    path: skills/intent_inference
+    description: Infers WHY changes happened using structured reasoning over detected patterns.
+    priority: 2
+
+  - name: risk-detection
+    path: skills/risk_detection
+    description: Flags unstable, fragile, or high-risk patterns. Transforms analysis into decision intelligence.
+    priority: 3
+
+  - name: narrative-engine
+    path: skills/narrative_engine
+    description: Converts structured phase, intent, and risk data into human-readable narratives.
+    priority: 4
+
+  - name: visual-timeline
+    path: skills/visual_timeline
+    description: Generates ASCII and SVG timeline visualizations with risk markers.
+    priority: 5
+
+pipeline:
+  - deep-history-analysis
+  - intent-inference
+  - risk-detection
+  - narrative-engine
+  - visual-timeline
+
+input:
+  type: git_repository
+  accepts:
+    - local_path
+    - git_log_text
+
+output:
+  formats:
+    - structured_json
+    - narrative_markdown
+    - ascii_timeline
+    - svg_timeline

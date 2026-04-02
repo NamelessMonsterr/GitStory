@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "gitstory"
+version = "1.2.0"
+description = "Repository Intelligence Engine — reconstructs intent from git history"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "dataclasses-json>=0.6.0",
+]
+
+[project.scripts]
+# FIX P1: main.py is a top-level script, not inside a package.
+# We declare it as a py_module so setuptools can find it.
+gitstory = "main:main"
+
+[tool.setuptools]
+# FIX: explicitly include main.py as a top-level module
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["core*", "skills*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
