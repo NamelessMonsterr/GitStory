@@ -146,8 +146,19 @@ GitStory tries to tell you **what it means**.
 
 - [Sample Narrative](examples/sample_output.md) - polished multi-phase story output
 - [Linux Kernel Style Demo](examples/demo_linux_kernel.md) - representative high-scale demo
+- [GitStory Analyzing Itself](examples/self_analysis.md) - a real report generated from this repository
 
 These are useful when you want to understand the output before running the CLI.
+
+---
+
+## GitStory Analyzing Itself
+
+GitStory has been run against its own repository history. That gives you a
+real, not hypothetical, example of the pipeline working on an active project.
+
+- See the report: [examples/self_analysis.md](examples/self_analysis.md)
+- Regenerate it locally: `python main.py . --tone story --timeline ascii --output examples/self_analysis.md`
 
 ---
 
@@ -217,3 +228,9 @@ It is a repository reasoning tool:
 - Python 3.9+
 - Git CLI available on `PATH`
 - Local repository access or piped `git log` input
+
+---
+
+## License
+
+MIT
