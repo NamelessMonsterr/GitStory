@@ -17,6 +17,7 @@ from core.models import (
     PhaseType,
     RiskAssessment,
     RiskLevel,
+    TransitionInsight,
 )
 
 
@@ -29,12 +30,25 @@ class NarrativeEngine:
         repo_name: str,
         tone: str = "story",
         risks: list[RiskAssessment] | None = None,
+        transitions: list[TransitionInsight] | None = None,
     ) -> str:
         if not phases:
             return f"# {repo_name}\n\nNo phases detected.\n"
         if tone == "professional":
-            return self._professional(phases, inferences, repo_name, risks or [])
-        return self._story(phases, inferences, repo_name, risks or [])
+            return self._professional(
+                phases,
+                inferences,
+                repo_name,
+                risks or [],
+                transitions or [],
+            )
+        return self._story(
+            phases,
+            inferences,
+            repo_name,
+            risks or [],
+            transitions or [],
+        )
 
     # ══════════════════════════════════════════════════════════════
     #  PROFESSIONAL
@@ -46,6 +60,7 @@ class NarrativeEngine:
         inferences: list[IntentInference],
         repo_name: str,
         risks: list[RiskAssessment],
+        transitions: list[TransitionInsight],
     ) -> str:
         lines: list[str] = []
         inf_map = {i.phase_number: i for i in inferences}
@@ -119,6 +134,32 @@ class NarrativeEngine:
             lines.append("---")
             lines.append("")
 
+        if transitions:
+            lines.append("## Transition Analysis")
+            lines.append("")
+            for transition in transitions:
+                badge = _conf_badge(transition.confidence)
+                lines.append(
+                    f"### Phase {transition.from_phase_number} -> Phase "
+                    f"{transition.to_phase_number}: {transition.title}"
+                )
+                lines.append("")
+                lines.append(
+                    f"**Meaning** ({badge}, score: "
+                    f"{transition.confidence_score:.2f}):"
+                )
+                lines.append(f"> {transition.summary}")
+                lines.append("")
+                lines.append("**Signals:**")
+                for signal in transition.signals:
+                    lines.append(f"- {signal}")
+                if transition.impact:
+                    lines.append("")
+                    lines.append(f"**Likely Impact:** {transition.impact}")
+                lines.append("")
+                lines.append("---")
+                lines.append("")
+
         # Risk Section
         if risks:
             lines.extend(self._render_risks(risks))
@@ -135,6 +176,7 @@ class NarrativeEngine:
         inferences: list[IntentInference],
         repo_name: str,
         risks: list[RiskAssessment],
+        transitions: list[TransitionInsight],
     ) -> str:
         lines: list[str] = []
         inf_map = {i.phase_number: i for i in inferences}
@@ -225,6 +267,33 @@ class NarrativeEngine:
                     lines.append(f"> {risk.inference}")
                     lines.append("")
 
+            lines.append("---")
+            lines.append("")
+
+        if transitions:
+            lines.append("## Between the Chapters")
+            lines.append("")
+            for transition in transitions:
+                conf_text = _conf_text(transition.confidence)
+                lines.append(
+                    f"### Phase {transition.from_phase_number} -> Phase "
+                    f"{transition.to_phase_number}: {transition.title}"
+                )
+                lines.append("")
+                lines.append(transition.summary)
+                lines.append("")
+                lines.append(
+                    f"*{conf_text} (score: {transition.confidence_score:.2f}).*"
+                )
+                lines.append("")
+                if transition.signals:
+                    lines.append("**Why this transition stands out:**")
+                    for signal in transition.signals:
+                        lines.append(f"- {signal}")
+                    lines.append("")
+                if transition.impact:
+                    lines.append(f"**What it likely means:** {transition.impact}")
+                    lines.append("")
             lines.append("---")
             lines.append("")
 

@@ -10,6 +10,7 @@ from datetime import datetime, timezone, timedelta
 from core.models import Commit, FileChange, PhaseType, RiskLevel
 from skills.deep_history_analysis import DeepHistoryAnalysis
 from skills.intent_inference import IntentInferenceEngine
+from skills.transition_analysis import TransitionAnalysisEngine
 from skills.risk_detection import RiskDetectionEngine
 from skills.narrative_engine import NarrativeEngine
 from skills.visual_timeline import VisualTimeline
@@ -92,6 +93,18 @@ class TestFullPipeline:
             assert len(inf.observation) > 0
             assert 0.0 <= inf.confidence_score <= 1.0
 
+    def test_pipeline_produces_transitions(self):
+        commits = _build_test_repo()
+        analysis = DeepHistoryAnalysis(commits=commits)
+        phases = analysis.run()
+        inferences = IntentInferenceEngine().run(phases)
+        transitions = TransitionAnalysisEngine().run(phases, inferences)
+
+        assert len(transitions) == max(len(phases) - 1, 0)
+        assert transitions[0].from_phase_number == 1
+        assert transitions[0].to_phase_number == 2
+        assert transitions[0].signals
+
     def test_pipeline_produces_risks(self):
         commits = _build_test_repo()
         analysis = DeepHistoryAnalysis(commits=commits)
@@ -107,11 +120,18 @@ class TestFullPipeline:
         analysis.repo_name = "integration-test"
         phases = analysis.run()
         inferences = IntentInferenceEngine().run(phases)
+        transitions = TransitionAnalysisEngine().run(phases, inferences)
         risks = RiskDetectionEngine().run(phases, inferences)
         narrative = NarrativeEngine().run(
-            phases, inferences, "integration-test", "story", risks=risks
+            phases,
+            inferences,
+            "integration-test",
+            "story",
+            risks=risks,
+            transitions=transitions,
         )
         assert "integration-test" in narrative
+        assert "Between the Chapters" in narrative
         assert len(narrative) > 200
 
     def test_pipeline_produces_professional_narrative(self):
@@ -119,10 +139,12 @@ class TestFullPipeline:
         analysis = DeepHistoryAnalysis(commits=commits)
         phases = analysis.run()
         inferences = IntentInferenceEngine().run(phases)
+        transitions = TransitionAnalysisEngine().run(phases, inferences)
         narrative = NarrativeEngine().run(
-            phases, inferences, "test", "professional"
+            phases, inferences, "test", "professional", transitions=transitions
         )
         assert "Repository Analysis" in narrative
+        assert "Transition Analysis" in narrative
 
     def test_pipeline_produces_ascii_timeline(self):
         commits = _build_test_repo()
@@ -172,8 +194,16 @@ class TestJsonOutput:
         analysis.repo_name = "json-test"
         phases = analysis.run()
         inferences = IntentInferenceEngine().run(phases)
+        transitions = TransitionAnalysisEngine().run(phases, inferences)
         risks = RiskDetectionEngine().run(phases, inferences)
-        narrative = NarrativeEngine().run(phases, inferences, "json-test", "story", risks=risks)
+        narrative = NarrativeEngine().run(
+            phases,
+            inferences,
+            "json-test",
+            "story",
+            risks=risks,
+            transitions=transitions,
+        )
 
         result = AnalysisResult(
             repo_name="json-test",
@@ -183,6 +213,7 @@ class TestJsonOutput:
             unique_authors=sorted({c.author for p in phases for c in p.commits}),
             phases=phases,
             inferences=inferences,
+            transitions=transitions,
             risks=risks,
             narrative=narrative,
         )
@@ -193,6 +224,8 @@ class TestJsonOutput:
         assert parsed["total_commits"] == len(commits)
         assert len(parsed["phases"]) >= 2
         assert len(parsed["inferences"]) >= 2
+        assert len(parsed["transitions"]) == len(transitions)
+        assert parsed["transitions"][0]["from_phase_number"] == 1
 
     def test_json_contains_risk_data(self):
         from core.models import AnalysisResult
@@ -201,6 +234,7 @@ class TestJsonOutput:
         analysis = DeepHistoryAnalysis(commits=commits)
         phases = analysis.run()
         inferences = IntentInferenceEngine().run(phases)
+        transitions = TransitionAnalysisEngine().run(phases, inferences)
         risks = RiskDetectionEngine().run(phases, inferences)
 
         result = AnalysisResult(
@@ -209,9 +243,12 @@ class TestJsonOutput:
             date_range_start=phases[0].start_date,
             date_range_end=phases[-1].end_date,
             unique_authors=[],
+            transitions=transitions,
             risks=risks,
         )
 
         parsed = json.loads(result.to_json())
         assert "risks" in parsed
         assert isinstance(parsed["risks"], list)
+        assert "transitions" in parsed
+        assert isinstance(parsed["transitions"], list)

@@ -164,6 +164,20 @@ class IntentInference:
 
 
 @dataclass
+class TransitionInsight:
+    """An interpreted transition between two adjacent phases."""
+
+    from_phase_number: int
+    to_phase_number: int
+    title: str
+    summary: str
+    signals: list[str] = field(default_factory=list)
+    confidence: Confidence = Confidence.MEDIUM
+    confidence_score: float = 0.0
+    impact: str = ""
+
+
+@dataclass
 class RiskAssessment:
     """A risk finding for a phase or cross-phase pattern."""
 
@@ -188,6 +202,7 @@ class AnalysisResult:
     unique_authors: list[str]
     phases: list[Phase] = field(default_factory=list)
     inferences: list[IntentInference] = field(default_factory=list)
+    transitions: list[TransitionInsight] = field(default_factory=list)
     risks: list[RiskAssessment] = field(default_factory=list)
     narrative: str = ""
     timeline_ascii: str = ""

@@ -17,6 +17,7 @@ from core.models import (
     Phase,
     PhaseMetrics,
     PhaseType,
+    TransitionInsight,
     RiskAssessment,
     RiskLevel,
 )
@@ -225,3 +226,33 @@ class TestAnalysisResult:
         parsed = json.loads(json_str)
         assert parsed["inferences"][0]["confidence"] == "high"
         assert parsed["inferences"][0]["confidence_score"] == 0.85
+
+    def test_to_json_contains_transitions(self):
+        result = AnalysisResult(
+            repo_name="transition-roundtrip",
+            total_commits=8,
+            date_range_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            date_range_end=datetime(2024, 1, 8, tzinfo=timezone.utc),
+            unique_authors=["dev1", "dev2"],
+            transitions=[
+                TransitionInsight(
+                    from_phase_number=1,
+                    to_phase_number=2,
+                    title="Feature Burst to Bugfix Spike",
+                    summary="Feature work gave way to reactive bug fixing.",
+                    signals=[
+                        "phase type changed from feature to bugfix",
+                        "commit frequency increased",
+                    ],
+                    confidence=Confidence.HIGH,
+                    confidence_score=0.91,
+                    impact="Likely instability after rollout.",
+                )
+            ],
+        )
+
+        parsed = json.loads(result.to_json())
+        assert "transitions" in parsed
+        assert parsed["transitions"][0]["from_phase_number"] == 1
+        assert parsed["transitions"][0]["to_phase_number"] == 2
+        assert parsed["transitions"][0]["confidence"] == "high"

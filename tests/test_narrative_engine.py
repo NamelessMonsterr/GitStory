@@ -9,6 +9,7 @@ from core.models import (
     Evidence,
     IntentInference,
     PhaseType,
+    TransitionInsight,
     RiskAssessment,
     RiskLevel,
 )
@@ -145,6 +146,70 @@ class TestRiskIntegration:
         inf = make_inference()
         result = NarrativeEngine().run([phase], [inf], "repo", "story", risks=[])
         assert "Risk" not in result or "Big Picture" in result
+
+
+class TestTransitionIntegration:
+    def test_story_shows_transition_section(self, make_phase, make_inference):
+        phases = [
+            make_phase(phase_number=1, phase_type=PhaseType.FEATURE),
+            make_phase(phase_number=2, phase_type=PhaseType.BUGFIX),
+        ]
+        inferences = [make_inference(1), make_inference(2)]
+        transition = TransitionInsight(
+            from_phase_number=1,
+            to_phase_number=2,
+            title="Feature Burst to Bugfix Spike",
+            summary="Feature work gave way to reactive bug fixing.",
+            signals=[
+                "phase type changed from feature_development to bug_fixing",
+                "commit cadence increased",
+            ],
+            confidence=Confidence.HIGH,
+            confidence_score=0.92,
+            impact="Likely instability after rollout.",
+        )
+
+        result = NarrativeEngine().run(
+            phases,
+            inferences,
+            "repo",
+            "story",
+            transitions=[transition],
+        )
+
+        assert "Between the Chapters" in result
+        assert "Feature Burst to Bugfix Spike" in result
+
+    def test_professional_shows_transition_section(self, make_phase, make_inference):
+        phases = [
+            make_phase(phase_number=1, phase_type=PhaseType.FEATURE),
+            make_phase(phase_number=2, phase_type=PhaseType.REFACTOR),
+        ]
+        inferences = [make_inference(1), make_inference(2)]
+        transition = TransitionInsight(
+            from_phase_number=1,
+            to_phase_number=2,
+            title="Feature Push to Refactor Cleanup",
+            summary="Rapid expansion gave way to code consolidation.",
+            signals=[
+                "phase type changed from feature_development to refactoring",
+                "deletion ratio increased",
+            ],
+            confidence=Confidence.MEDIUM,
+            confidence_score=0.78,
+            impact="Likely cleanup after rapid growth.",
+        )
+
+        result = NarrativeEngine().run(
+            phases,
+            inferences,
+            "repo",
+            "professional",
+            transitions=[transition],
+        )
+
+        assert "Transition Analysis" in result
+        assert "Feature Push to Refactor Cleanup" in result
 
 
 class TestEdgeCases:

@@ -20,6 +20,7 @@ from core.models import AnalysisResult
 from core.git_parser import GitParser
 from skills.deep_history_analysis import DeepHistoryAnalysis
 from skills.intent_inference import IntentInferenceEngine
+from skills.transition_analysis import TransitionAnalysisEngine
 from skills.risk_detection import RiskDetectionEngine
 from skills.narrative_engine import NarrativeEngine
 from skills.visual_timeline import VisualTimeline
@@ -44,8 +45,29 @@ _FALLBACK_REPLACEMENTS: tuple[tuple[str, str], ...] = (
 )
 
 
+_UNICODE_FALLBACK_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("\u26a0\ufe0f", "RISK"),
+    ("\u26a0", "RISK"),
+    ("\U0001f7e2", ""),
+    ("\U0001f7e1", ""),
+    ("\U0001f534", ""),
+    ("\U0001f7e0", ""),
+    ("\U0001f525", "INTENSE"),
+    ("\u26a1", "FAST"),
+    ("\u2588", "#"),
+    ("\u2590", "|"),
+    ("\u258c", "|"),
+    ("\u2550", "="),
+    ("\u2014", "-"),
+    ("\u2013", "-"),
+    ("\u00b7", "."),
+)
+
+
 def _ascii_fallback(text: str) -> str:
     """Best-effort transliteration for non-Unicode-friendly terminals."""
+    for source, replacement in _UNICODE_FALLBACK_REPLACEMENTS:
+        text = text.replace(source, replacement)
     for source, replacement in _FALLBACK_REPLACEMENTS:
         text = text.replace(source, replacement)
     return text
@@ -71,6 +93,101 @@ def _safe_for_stream(text: str, stream: TextIO) -> str:
         )
 
 
+def _build_debug_report(result: AnalysisResult) -> str:
+    """Render a phase-by-phase explanation of the pipeline's decisions."""
+    inference_map = {inf.phase_number: inf for inf in result.inferences}
+    transition_map: dict[int, list] = {}
+    for transition in result.transitions:
+        transition_map.setdefault(transition.from_phase_number, []).append(
+            transition
+        )
+    risk_map: dict[int, list] = {}
+    for risk in result.risks:
+        risk_map.setdefault(risk.phase_number, []).append(risk)
+
+    lines: list[str] = []
+    lines.append("=== DEBUG: PIPELINE INTELLIGENCE ===")
+    lines.append(
+        f"repo={result.repo_name} phases={len(result.phases)} "
+        f"commits={result.total_commits}"
+    )
+
+    for phase in result.phases:
+        metrics = phase.metrics
+        inference = inference_map.get(phase.phase_number)
+        lines.append("")
+        lines.append(f"[phase {phase.phase_number}] {phase.phase_type.value}")
+        lines.append(
+            "  metrics: "
+            f"commits={metrics.commit_count}, "
+            f"churn=+{metrics.total_additions}/-{metrics.total_deletions}, "
+            f"authors={metrics.unique_authors}, "
+            f"freq={metrics.commit_frequency_per_day:.1f}/day"
+        )
+        lines.append(f"  boundary: {phase.boundary_reason}")
+
+        if inference is not None:
+            lines.append(
+                "  intent: "
+                f"{inference.confidence.value} "
+                f"({inference.confidence_score:.2f}) "
+                f"{inference.intent_summary}"
+            )
+            if inference.evidence:
+                lines.append("  evidence:")
+                for evidence in inference.evidence:
+                    lines.append(
+                        f"    - {evidence.signal}: {evidence.detail}"
+                    )
+            else:
+                lines.append("  evidence: none")
+        else:
+            lines.append("  intent: none")
+            lines.append("  evidence: none")
+
+        phase_transitions = transition_map.get(phase.phase_number, [])
+        if phase_transitions:
+            lines.append("  transitions:")
+            for transition in phase_transitions:
+                lines.append(
+                    "    - "
+                    f"to phase {transition.to_phase_number}: {transition.title} "
+                    f"[{transition.confidence.value} "
+                    f"{transition.confidence_score:.2f}]"
+                )
+                lines.append(f"      meaning: {transition.summary}")
+                for signal in transition.signals:
+                    lines.append(f"      signal: {signal}")
+        else:
+            lines.append("  transitions: none")
+
+        phase_risks = risk_map.get(phase.phase_number, [])
+        if phase_risks:
+            lines.append("  risks:")
+            for risk in phase_risks:
+                lines.append(
+                    "    - "
+                    f"{risk.risk_id} {risk.risk_level.value}: {risk.title}"
+                )
+                for signal in risk.signals:
+                    lines.append(f"      signal: {signal}")
+        else:
+            lines.append("  risks: none")
+
+    cross_phase_risks = risk_map.get(0, [])
+    if cross_phase_risks:
+        lines.append("")
+        lines.append("[cross-phase risks]")
+        for risk in cross_phase_risks:
+            lines.append(
+                f"  - {risk.risk_id} {risk.risk_level.value}: {risk.title}"
+            )
+            for signal in risk.signals:
+                lines.append(f"    signal: {signal}")
+
+    return "\n".join(lines)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="GitStory — Repository Intelligence Engine",
@@ -93,6 +210,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-commits", type=int, default=None)
     p.add_argument("--output", type=str, default=None, help="Write to file")
     p.add_argument("--json", action="store_true", help="Structured JSON output")
+    p.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print phase signals, transitions, and risks to stderr",
+    )
     return p
 
 
@@ -104,6 +226,7 @@ def run_pipeline(
     max_commits: int | None,
     output_path: str | None,
     json_mode: bool,
+    debug_mode: bool,
 ) -> int:
 
     # ── Step 0: Parse ────────────────────────────────────────────
@@ -149,7 +272,17 @@ def run_pipeline(
 
     print(f"[gitstory] Generated {len(inferences)} intent inferences", file=sys.stderr)
 
-    # ── Step 3: Risk Detection ───────────────────────────────────
+    # ── Step 3: Transition Analysis ──────────────────────────────
+    transition_engine = TransitionAnalysisEngine()
+    transitions = transition_engine.run(phases)
+
+    if transitions:
+        print(
+            f"[gitstory] Interpreted {len(transitions)} phase transitions",
+            file=sys.stderr,
+        )
+
+    # ── Step 4: Risk Detection ───────────────────────────────────
     risk_engine = RiskDetectionEngine()
     risks = risk_engine.run(phases, inferences)
 
@@ -160,13 +293,18 @@ def run_pipeline(
             file=sys.stderr,
         )
 
-    # ── Step 4: Narrative Engine ─────────────────────────────────
+    # ── Step 5: Narrative Engine ─────────────────────────────────
     narrative_engine = NarrativeEngine()
     narrative = narrative_engine.run(
-        phases, inferences, repo_name, tone, risks=risks
+        phases,
+        inferences,
+        repo_name,
+        tone,
+        risks=risks,
+        transitions=transitions,
     )
 
-    # ── Step 5: Visual Timeline ──────────────────────────────────
+    # ── Step 6: Visual Timeline ──────────────────────────────────
     tl = VisualTimeline()
     ascii_tl = (
         tl.ascii(phases, risks=risks) if timeline_fmt in ("ascii", "both") else ""
@@ -186,11 +324,18 @@ def run_pipeline(
         unique_authors=all_authors,
         phases=phases,
         inferences=inferences,
+        transitions=transitions,
         risks=risks,
         narrative=narrative,
         timeline_ascii=ascii_tl,
         timeline_svg=svg_tl,
     )
+
+    if debug_mode:
+        print(
+            _safe_for_stream(_build_debug_report(result), sys.stderr),
+            file=sys.stderr,
+        )
 
     # ── Output ───────────────────────────────────────────────────
     if json_mode:
@@ -226,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
         max_commits=args.max_commits,
         output_path=args.output,
         json_mode=args.json,
+        debug_mode=args.debug,
     )
 
 
