@@ -1,0 +1,35 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "mixed"
+  ],
+  "phases": [
+    {
+      "type": "mixed",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.0,
+        0.4
+      ],
+      "active_signals": [],
+      "dominant_signal": null,
+      "signal_expectations": {
+        "urgency_pressure": {
+          "max": 0.3
+        },
+        "feature_push": {
+          "max": 0.35
+        },
+        "documentation_push": {
+          "max": 0.35
+        },
+        "stabilization": {
+          "max": 0.2
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": []
+}

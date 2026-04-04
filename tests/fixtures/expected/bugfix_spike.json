@@ -1,0 +1,74 @@
+{
+  "phase_count": 2,
+  "canonical_phase_count": 2,
+  "phase_sequence": [
+    "feature_development",
+    "hotfix_sprint"
+  ],
+  "phases": [
+    {
+      "type": "feature_development",
+      "confidence_bucket": "medium",
+      "confidence_range": [
+        0.6,
+        0.7
+      ],
+      "active_signals": [
+        "feature_push"
+      ],
+      "dominant_signal": "feature_push",
+      "signal_expectations": {
+        "feature_push": {
+          "min": 0.9
+        },
+        "urgency_pressure": {
+          "max": 0.15
+        }
+      }
+    },
+    {
+      "type": "hotfix_sprint",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.25,
+        0.4
+      ],
+      "active_signals": [],
+      "dominant_signal": null,
+      "signal_expectations": {
+        "urgency_pressure": {
+          "min": 0.3,
+          "max": 0.4
+        }
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "from_type": "feature_development",
+      "to_type": "hotfix_sprint",
+      "title": "Feature Push Gave Way to Firefighting",
+      "confidence_bucket": "high",
+      "confidence_score": 0.95,
+      "signal_count_min": 3
+    }
+  ],
+  "risks": [
+    {
+      "title": "Fragile Code — Concentrated File Churn",
+      "severity": "high"
+    },
+    {
+      "title": "Production Instability Detected",
+      "severity": "high"
+    },
+    {
+      "title": "Quality Gap — Feature Push Followed by Hotfix",
+      "severity": "high"
+    },
+    {
+      "title": "Quality Erosion — No Test Coverage in High-Churn Phase",
+      "severity": "medium"
+    }
+  ]
+}

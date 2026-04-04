@@ -18,6 +18,8 @@ from core.models import (
 )
 from core.pattern_detector import PatternDetector
 
+MIN_CHURN_RISK_COMMITS = 7
+
 
 class RiskDetectionEngine:
     """Evaluates phases and cross-phase patterns for risk signals."""
@@ -61,17 +63,53 @@ class RiskDetectionEngine:
         m = phase.metrics
         commits = phase.commits
         pressure = PatternDetector.detect_pressure_signals(commits)
+        temporal_urgency = pressure.get("temporal_urgency", pressure["burst_pressure"])
         idx = start_id
 
         # ── Risk: Production Instability ─────────────────────────
         if (
             phase.phase_type in (PhaseType.HOTFIX, PhaseType.BUGFIX)
-            and pressure["fix_density"] > 0.5
-            and pressure["high_frequency"] > 0.3
+            and (
+                pressure["fix_density"] > 0.5
+                or (
+                    pressure["fix_density"] >= 0.45
+                    and pressure["alternation_score"] >= 0.8
+                )
+            )
+            and (
+                pressure["high_frequency"] > 0.3
+                or temporal_urgency > 0.25
+            )
+            and (
+                pressure["fix_diversity"] >= 0.5
+                or pressure["implicit_fix_density"] >= 0.3
+            )
+            and pressure["semantic_alignment"] >= 0.6
+            and (
+                pressure["fix_coherence"] >= 0.35
+                or pressure["implicit_fix_density"] >= 0.50
+                or pressure["alternation_score"] >= 0.80
+            )
+            and pressure["impact_weight"] >= 0.75
+            and pressure["cleanup_bias"] <= 0.35
+            and (
+                pressure["reactive_pressure"] >= pressure["proactive_pressure"]
+                or (
+                    pressure["implicit_fix_density"] >= 0.30
+                    and temporal_urgency >= 0.45
+                )
+                or (
+                    pressure["buglike_density"] >= 0.90
+                    and pressure["fix_density"] >= 0.70
+                    and pressure["high_frequency"] >= 0.80
+                    and pressure["cleanup_bias"] <= 0.20
+                )
+            )
         ):
             level = (
                 RiskLevel.CRITICAL
-                if pressure["fix_density"] > 0.7 and m.commit_frequency_per_day > 5
+                if pressure["reactive_pressure"] > 0.35
+                and (m.commit_frequency_per_day > 5 or temporal_urgency > 0.4)
                 else RiskLevel.HIGH
             )
             risks.append(
@@ -83,13 +121,23 @@ class RiskDetectionEngine:
                     signals=[
                         f"{m.commit_count} commits in {phase.duration_days:.1f} days",
                         f"Fix-related keyword density: {pressure['fix_density']:.0%}",
+                        f"Implicit bug density: {pressure['implicit_fix_density']:.0%}",
+                        f"Semantic alignment: {pressure['semantic_alignment']:.0%}",
+                        f"Fix coherence: {pressure['fix_coherence']:.0%}",
+                        f"Impact weight: {pressure['impact_weight']:.0%}",
+                        f"Temporal urgency: {temporal_urgency:.0%}",
+                        f"Burst pressure (adjusted): {pressure['burst_pressure']:.0%}",
+                        f"Burst pressure (raw): {pressure.get('raw_burst_pressure', pressure['burst_pressure']):.0%}",
+                        f"Reactive pressure: {pressure['reactive_pressure']:.0%}",
+                        f"Proactive pressure: {pressure['proactive_pressure']:.0%}",
+                        f"Cleanup bias: {pressure['cleanup_bias']:.0%}",
                         f"Commit frequency: {m.commit_frequency_per_day:.1f}/day",
                         f"Average message length: {m.avg_message_length_words:.1f} words (terse)",
                     ],
                     inference=(
                         "This pattern strongly indicates reactive fixes under "
                         "production pressure. The combination of high frequency, "
-                        "fix-heavy vocabulary, and short messages is textbook "
+                        "high-impact bug handling, and short messages is textbook "
                         "incident response."
                     ),
                     impact=(
@@ -106,7 +154,10 @@ class RiskDetectionEngine:
         high_churn_files = PatternDetector.files_with_high_churn(
             commits, min_touches=4
         )
-        if high_churn_files:
+        if high_churn_files and (
+            m.commit_count >= MIN_CHURN_RISK_COMMITS
+            or m.total_churn >= 500
+        ):
             top_fragile = high_churn_files[:5]
             file_details = [
                 f"`{path}` modified {count} times"

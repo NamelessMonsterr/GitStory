@@ -1,0 +1,12 @@
+sparse001|alice|alice@example.com|1704067200|handle crash in payment
+2	4	src/payment.py
+sparse002|alice|alice@example.com|1704240000|fix edge case in auth
+2	4	src/auth.py
+sparse003|alice|alice@example.com|1704499200|guard null pointer
+1	4	src/auth.py
+sparse004|alice|alice@example.com|1704672000|prevent timeout in checkout
+1	4	src/checkout.py
+sparse005|alice|alice@example.com|1704927600|recover missing session token
+2	4	src/auth.py
+sparse006|alice|alice@example.com|1705183200|avoid race in payment callback
+1	4	src/payment.py

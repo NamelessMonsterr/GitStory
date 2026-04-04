@@ -54,6 +54,9 @@ class IntentInferenceEngine:
             intent_summary=intent_summary,
             confidence=confidence,
             confidence_score=round(confidence_score, 2),
+            signal_scores={
+                name: round(data["score"], 3) for name, data in signals.items()
+            },
             reasoning=reasoning,
             evidence=evidence,
             observation=observation,
@@ -73,11 +76,34 @@ class IntentInferenceEngine:
         # 1. Urgency / Pressure
         late_weight = 0.20 if pressure.get("late_night_available", False) else 0.0
         remaining = 1.0 - late_weight
-        pressure_score = (
-            pressure["short_messages"] * (remaining * 0.30)
-            + pressure["high_frequency"] * (remaining * 0.35)
+        temporal_urgency = pressure.get("temporal_urgency", pressure["burst_pressure"])
+        base_pressure_score = (
+            pressure["short_messages"] * (remaining * 0.18)
+            + pressure["high_frequency"] * (remaining * 0.18)
+            + temporal_urgency * (remaining * 0.24)
             + pressure["late_night_ratio"] * late_weight
-            + pressure["fix_density"] * (remaining * 0.35)
+            + pressure["reactive_pressure"] * (remaining * 0.30)
+            + pressure["fix_pressure"] * (remaining * 0.10)
+        )
+        pressure_score = (
+            base_pressure_score
+            * max(0.15, 1.0 - pressure["cleanup_bias"])
+            * max(0.25, pressure["impact_weight"])
+            * max(0.35, pressure["reactive_ratio"] + 0.15)
+        )
+        if pressure["implicit_fix_density"] >= 0.25 and pressure["impact_weight"] >= 0.75:
+            pressure_score = max(
+                pressure_score,
+                (temporal_urgency * 0.60)
+                + (pressure["implicit_fix_density"] * 0.30)
+                + (pressure["semantic_alignment"] * 0.10),
+            )
+        urgency_suppressed = (
+            (pressure["impact_weight"] < 0.4 and pressure["cleanup_bias"] > 0.6)
+            or (
+                temporal_urgency < 0.1
+                and pressure["reactive_pressure"] < 0.15
+            )
         )
         fix_commits = sum(
             1
@@ -85,22 +111,52 @@ class IntentInferenceEngine:
             if set(re.findall(r"[a-z]+", c.message.lower()))
             & {"fix", "bug", "hotfix", "patch", "crash", "error", "broken"}
         )
+        bug_signal_commits = max(
+            fix_commits,
+            int(round(pressure.get("buglike_density", 0.0) * len(commits))),
+        )
         late_detail = (
             f"late-night={pressure['late_night_ratio']:.0%} (author-local)"
             if pressure.get("late_night_available")
             else "late-night=unavailable (no tz data)"
         )
         signals["urgency_pressure"] = {
-            "active": pressure_score > 0.35,
+            "active": (
+                not urgency_suppressed
+                and temporal_urgency >= 0.1
+                and pressure_score > 0.35
+                and (len(commits) >= 2 or pressure["fix_pressure"] > 0.5)
+                and (
+                    pressure["reactive_pressure"] > 0.15
+                    or pressure["fix_pressure"] > 0.2
+                    or pressure["semantic_alignment"] > 0.4
+                    or pressure["implicit_fix_density"] > 0.2
+                    or pressure["late_night_ratio"] > 0.3
+                )
+            ),
             "score": round(pressure_score, 3),
             "description": (
                 f"Pressure score {pressure_score:.2f} — "
                 f"short msgs={pressure['short_messages']:.0%}, "
                 f"frequency={pressure['high_frequency']:.2f}, "
+                f"burst-adjusted={pressure['burst_pressure']:.2f}, "
+                f"burst-raw={pressure.get('raw_burst_pressure', pressure['burst_pressure']):.2f}, "
+                f"compression={pressure['compression_ratio']:.2f}, "
                 f"{late_detail}, "
-                f"fix-density={pressure['fix_density']:.0%}"
+                f"fix-density={pressure['fix_density']:.0%}, "
+                f"implicit-fix-density={pressure['implicit_fix_density']:.0%}, "
+                f"fix-diversity={pressure['fix_diversity']:.2f}, "
+                f"fix-pressure={pressure['fix_pressure']:.0%}, "
+                f"reactive-pressure={pressure['reactive_pressure']:.0%}, "
+                f"semantic-alignment={pressure['semantic_alignment']:.0%}, "
+                f"reactive-ratio={pressure['reactive_ratio']:.0%}, "
+                f"proactive-ratio={pressure['proactive_ratio']:.0%}, "
+                f"alternation={pressure['alternation_score']:.0%}, "
+                f"coherence={pressure['fix_coherence']:.0%}, "
+                f"impact-weight={pressure['impact_weight']:.0%}, "
+                f"cleanup-bias={pressure['cleanup_bias']:.0%}"
             ),
-            "commits_involved": fix_commits,
+            "commits_involved": bug_signal_commits,
         }
 
         # 2. Feature Push
@@ -186,13 +242,75 @@ class IntentInferenceEngine:
             if PatternDetector.classify_commit(c) == "documentation"
         )
         signals["documentation_push"] = {
-            "active": doc_commits >= 3 or (doc_commits / n > 0.4),
+            "active": (
+                doc_commits >= 3 or (doc_commits / n > 0.4)
+            )
+            and not (
+                pressure["cleanup_bias"] >= 0.75
+                and temporal_urgency < 0.1
+            ),
             "score": round(doc_commits / n, 3),
             "description": f"{doc_commits}/{len(commits)} commits are documentation-focused",
             "commits_involved": doc_commits,
         }
 
-        # 6. Team Change / Handoff
+        # 6. Maintenance Cleanup
+        cleanup_score = (
+            max(pressure["cleanup_bias"], 1.0 - pressure["impact_weight"])
+            * max(pressure["fix_coherence"], 0.60)
+        )
+        signals["maintenance_cleanup"] = {
+            "active": (
+                cleanup_score > 0.40
+                and pressure["cleanup_bias"] >= 0.55
+                and (
+                    pressure["impact_weight"] <= 0.55
+                    or (
+                        pressure["cleanup_bias"] >= 0.75
+                        and temporal_urgency < 0.1
+                    )
+                )
+            ),
+            "score": round(cleanup_score, 3),
+            "description": (
+                f"Cleanup score {cleanup_score:.2f} — "
+                f"cleanup-bias={pressure['cleanup_bias']:.0%}, "
+                f"impact-weight={pressure['impact_weight']:.0%}, "
+                f"coherence={pressure['fix_coherence']:.0%}, "
+                f"cleanup-fix-commits={pressure['cleanup_fix_commits']}"
+            ),
+            "commits_involved": pressure["cleanup_fix_commits"],
+        }
+
+        # 7. Planned Resilience
+        resilience_score = (
+            pressure["proactive_pressure"]
+            * max(0.35, pressure["impact_weight"])
+            * max(0.25, 1.0 - pressure["burst_pressure"])
+            * max(0.25, 1.0 - pressure["cleanup_bias"])
+        )
+        signals["planned_resilience"] = {
+            "active": (
+                resilience_score > 0.18
+                and len(commits) >= 2
+                and pressure["proactive_ratio"] > pressure["reactive_ratio"]
+                and pressure["impact_weight"] >= 0.6
+                and pressure["burst_pressure"] < 0.45
+                and pressure.get("proactive_resilience_density", 0.0) >= 0.25
+            ),
+            "score": round(resilience_score, 3),
+            "description": (
+                f"Resilience score {resilience_score:.2f} — "
+                f"proactive-pressure={pressure['proactive_pressure']:.0%}, "
+                f"proactive-ratio={pressure['proactive_ratio']:.0%}, "
+                f"burst={pressure['burst_pressure']:.0%}, "
+                f"impact-weight={pressure['impact_weight']:.0%}, "
+                f"alternation={pressure['alternation_score']:.0%}"
+            ),
+            "commits_involved": bug_signal_commits,
+        }
+
+        # 8. Team Change / Handoff
         authors = PatternDetector.unique_authors(commits)
         signals["team_change"] = {
             "active": len(authors) >= 3 or (
@@ -241,11 +359,13 @@ class IntentInferenceEngine:
             return "No strong patterns detected in this phase."
 
         descriptions = {
-            "urgency_pressure": "pressure indicators elevated — terse messages, high frequency, fix-heavy vocabulary",
+            "urgency_pressure": "pressure indicators elevated — reactive bug work compressed into a tight burst",
             "feature_push": "feature-heavy profile with net code growth",
             "tech_debt_payoff": "deliberate refactoring with significant code removal",
             "stabilization": "testing and CI infrastructure being reinforced",
             "documentation_push": "documentation is a primary focus",
+            "maintenance_cleanup": "coherent low-impact cleanup dominates the phase",
+            "planned_resilience": "proactive hardening and resilience work is being layered in deliberately",
             "team_change": "multiple contributors active, possible handoff",
         }
         parts = [descriptions[a] for a in active if a in descriptions]
@@ -257,6 +377,7 @@ class IntentInferenceEngine:
         self, phase: Phase, signals: dict[str, dict]
     ) -> tuple[str, Confidence, float]:
         """Returns (summary, categorical confidence, numeric score)."""
+        pressure = PatternDetector.detect_pressure_signals(phase.commits)
         active = {name: s for name, s in signals.items() if s["active"]}
         count = len(active)
 
@@ -267,11 +388,120 @@ class IntentInferenceEngine:
         else:
             confidence = Confidence.LOW
 
-        # Numeric confidence: base 0.25 + signal contributions
-        total_signal_score = sum(s["score"] for s in active.values())
-        confidence_score = min(
-            0.25 + (count * 0.15) + (total_signal_score * 0.08), 0.95
-        )
+        signal_weights = {
+            "urgency_pressure": 1.25,
+            "feature_push": 1.0,
+            "tech_debt_payoff": 1.0,
+            "stabilization": 0.85,
+            "documentation_push": 0.70,
+            "maintenance_cleanup": 0.70,
+            "planned_resilience": 0.85,
+            "team_change": 0.60,
+        }
+        signal_groups = {
+            "urgency_pressure": "pressure",
+            "feature_push": "growth",
+            "tech_debt_payoff": "debt",
+            "stabilization": "stability",
+            "documentation_push": "cleanup",
+            "maintenance_cleanup": "cleanup",
+            "planned_resilience": "resilience",
+            "team_change": "team",
+        }
+
+        if not active:
+            confidence_score = 0.25
+        else:
+            weighted_scores = [
+                min(data["score"] * signal_weights.get(name, 1.0), 1.0)
+                for name, data in active.items()
+            ]
+            top_signal = max(weighted_scores)
+            mean_signal = sum(weighted_scores) / len(weighted_scores)
+            distinct_groups = len(
+                {signal_groups.get(name, name) for name in active}
+            )
+            confidence_score = min(
+                0.15
+                + (top_signal * 0.45)
+                + (mean_signal * 0.05)
+                + (max(distinct_groups - 1, 0) * 0.12),
+                0.95,
+            )
+            if (
+                phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
+                and signals["urgency_pressure"]["score"] >= 0.5
+            ):
+                confidence_score = max(confidence_score, 0.5)
+            if (
+                phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
+                and signals["urgency_pressure"]["score"] >= 0.65
+                and "maintenance_cleanup" not in active
+                and "planned_resilience" not in active
+            ):
+                confidence_score = max(confidence_score, 0.8)
+
+        if (
+            phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
+            and pressure["implicit_fix_density"] >= 0.25
+            and pressure["semantic_alignment"] >= 0.55
+            and pressure["impact_weight"] >= 0.75
+        ):
+            semantic_floor = min(
+                0.58,
+                0.18
+                + (pressure["implicit_fix_density"] * 0.24)
+                + (pressure["reactive_ratio"] * 0.08)
+                + (pressure["impact_weight"] * 0.08),
+            )
+            confidence_score = max(confidence_score, semantic_floor)
+
+        if (
+            phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
+            and pressure["buglike_density"] >= 0.85
+            and pressure["fix_density"] >= 0.60
+            and pressure["semantic_alignment"] >= 0.75
+            and pressure["reactive_ratio"] >= 0.70
+        ):
+            confidence_score = max(confidence_score, 0.35)
+
+        if (
+            phase.phase_type == PhaseType.REFACTOR
+            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.05
+            and pressure["reactive_ratio"] < 0.3
+        ):
+            confidence_score *= 0.92
+
+        if (
+            phase.phase_type == PhaseType.FEATURE
+            and signals["maintenance_cleanup"]["active"]
+            and pressure["alternation_score"] < 0.4
+            and pressure["raw_alternation_score"] > pressure["alternation_score"]
+            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.1
+        ):
+            confidence_score = max(confidence_score, 0.45)
+
+        if (
+            phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
+            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.1
+            and (pressure["fix_diversity"] * pressure["impact_weight"]) < 0.3
+        ):
+            confidence_score *= 0.9
+
+        if (
+            "maintenance_cleanup" in active
+            and phase.phase_type != PhaseType.FEATURE
+            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.1
+        ):
+            confidence_score *= 0.8
+
+        confidence_score = round(min(max(confidence_score, 0.0), 0.95), 3)
+        if confidence_score >= 0.7:
+            confidence = Confidence.HIGH
+        elif confidence_score >= 0.4:
+            confidence = Confidence.MEDIUM
+        else:
+            confidence = Confidence.LOW
 
         m = phase.metrics
 
@@ -295,7 +525,23 @@ class IntentInferenceEngine:
         has_debt = "tech_debt_payoff" in active
         has_stable = "stabilization" in active
         has_docs = "documentation_push" in active
+        has_cleanup = "maintenance_cleanup" in active
+        has_resilience = "planned_resilience" in active
         has_team = "team_change" in active
+        cleanup_heavy = (
+            has_cleanup
+            or (
+                phase.phase_type
+                in {
+                    PhaseType.MIXED,
+                    PhaseType.INFRASTRUCTURE,
+                    PhaseType.DOCUMENTATION,
+                    PhaseType.REFACTOR,
+                }
+                and signals["urgency_pressure"]["score"] < 0.35
+                and pressure["cleanup_bias"] >= 0.7
+            )
+        )
 
         if phase.phase_type == PhaseType.REFACTOR or has_debt:
             summary = (
@@ -311,8 +557,8 @@ class IntentInferenceEngine:
                 "This isn't planned development — it's damage control. "
                 f"High-frequency, low-diff commits over a compressed window "
                 f"({m.commit_frequency_per_day:.1f}/day) with terse messages "
-                f"(avg {m.avg_message_length_words:.1f} words) and fix-heavy "
-                f"vocabulary. The pattern is textbook reactive bug fixing — "
+                f"(avg {m.avg_message_length_words:.1f} words) and concentrated "
+                f"bug-handling signals. The pattern is textbook reactive bug fixing — "
                 f"likely post-release stabilization or production incident response."
             )
         elif has_feature and not has_urgency:
@@ -336,6 +582,13 @@ class IntentInferenceEngine:
                 f"Avg message length of {m.avg_message_length_words:.1f} "
                 f"words says urgency."
             )
+        elif has_resilience and not has_urgency:
+            summary = (
+                "This looks like proactive hardening, not reactive firefighting. "
+                "The commits concentrate on retries, fallbacks, and defensive behavior, "
+                "but the temporal profile stays controlled rather than bursty. "
+                "That pattern fits planned resilience work around critical paths."
+            )
         elif has_stable:
             summary = (
                 "Stabilization mode. Tests are being added, CI pipelines "
@@ -343,6 +596,13 @@ class IntentInferenceEngine:
                 "a feature push or incident — the shift from "
                 "'make it work' to 'make it solid.' The commit frequency "
                 f"({m.commit_frequency_per_day:.1f}/day) is measured, not frantic."
+            )
+        elif cleanup_heavy:
+            summary = (
+                "Maintenance cleanup, not firefighting. The phase is dominated "
+                "by documentation, infrastructure, and style-oriented fixes, "
+                "with low semantic bug pressure. This looks like deliberate "
+                "housekeeping rather than product instability."
             )
         elif has_docs:
             summary = (

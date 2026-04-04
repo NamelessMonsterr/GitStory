@@ -1,0 +1,28 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "feature_development"
+  ],
+  "phases": [
+    {
+      "type": "feature_development",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.3,
+        0.4
+      ],
+      "active_signals": [
+        "planned_resilience"
+      ],
+      "dominant_signal": null,
+      "signal_expectations": {
+        "planned_resilience": {
+          "min": 0.35
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": []
+}

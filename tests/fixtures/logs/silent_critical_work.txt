@@ -1,0 +1,12 @@
+scw001|alice|alice@example.com|1704762000|handle null pointer in payment flow
+1	4	src/payment/checkout.py
+scw002|alice|alice@example.com|1704762900|add retry logic for checkout
+2	3	src/payment/retry.py
+scw003|alice|alice@example.com|1704763800|guard edge case in auth callback
+1	3	src/auth/callback.py
+scw004|alice|alice@example.com|1704764700|prevent timeout in session refresh
+1	3	src/auth/session.py
+scw005|alice|alice@example.com|1704765600|recover missing token in checkout
+2	4	src/payment/token.py
+scw006|alice|alice@example.com|1704766500|guard null edge case in invoice finalize
+1	4	src/payment/invoice.py

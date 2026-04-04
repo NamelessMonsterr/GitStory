@@ -1,0 +1,12 @@
+fire001|alice|alice@example.com|1704067200|handle null pointer in checkout
+2	5	src/checkout/flow.py
+fire002|alice|alice@example.com|1704068100|guard edge case in auth
+2	4	src/auth/flow.py
+fire003|alice|alice@example.com|1704069000|add retry logic for payment
+2	5	src/payment/flow.py
+fire004|alice|alice@example.com|1704069900|prevent crash on timeout
+1	4	src/payment/timeout.py
+fire005|alice|alice@example.com|1704070800|recover missing token in checkout
+2	4	src/checkout/token.py
+fire006|alice|alice@example.com|1704071700|avoid race in auth callback
+1	4	src/auth/callback.py

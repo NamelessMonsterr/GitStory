@@ -1,0 +1,24 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "feature_development"
+  ],
+  "phases": [
+    {
+      "type": "feature_development",
+      "confidence_bucket": "medium",
+      "confidence_range": [
+        0.45,
+        0.65
+      ],
+      "pressure_expectations": {
+        "alternation_score": {
+          "max": 0.35
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": []
+}

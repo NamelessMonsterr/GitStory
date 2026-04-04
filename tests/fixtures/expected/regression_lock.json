@@ -1,0 +1,119 @@
+{
+  "phase_count": 4,
+  "canonical_phase_count": 4,
+  "phase_sequence": [
+    "initial_setup",
+    "feature_development",
+    "hotfix_sprint",
+    "refactoring"
+  ],
+  "phases": [
+    {
+      "type": "initial_setup",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.2,
+        0.3
+      ],
+      "active_signals": [],
+      "dominant_signal": null,
+      "signal_expectations": {
+        "urgency_pressure": {
+          "max": 0.2
+        }
+      }
+    },
+    {
+      "type": "feature_development",
+      "confidence_bucket": "medium",
+      "confidence_range": [
+        0.6,
+        0.7
+      ],
+      "active_signals": [
+        "feature_push"
+      ],
+      "dominant_signal": "feature_push",
+      "signal_expectations": {
+        "feature_push": {
+          "min": 0.95
+        },
+        "urgency_pressure": {
+          "max": 0.15
+        }
+      }
+    },
+    {
+      "type": "hotfix_sprint",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.2,
+        0.35
+      ],
+      "active_signals": [],
+      "dominant_signal": null,
+      "signal_expectations": {
+        "urgency_pressure": {
+          "min": 0.5
+        }
+      }
+    },
+    {
+      "type": "refactoring",
+      "confidence_bucket": "medium",
+      "confidence_range": [
+        0.5,
+        0.6
+      ],
+      "active_signals": [
+        "tech_debt_payoff"
+      ],
+      "dominant_signal": "tech_debt_payoff",
+      "signal_expectations": {
+        "tech_debt_payoff": {
+          "min": 0.75
+        }
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "from_type": "initial_setup",
+      "to_type": "feature_development",
+      "title": "Scaffolding Gave Way to Build-Out",
+      "confidence_bucket": "high",
+      "confidence_score": 0.84,
+      "signal_count_min": 2
+    },
+    {
+      "from_type": "feature_development",
+      "to_type": "hotfix_sprint",
+      "title": "Feature Push Gave Way to Firefighting",
+      "confidence_bucket": "high",
+      "confidence_score": 0.88,
+      "signal_count_min": 2
+    },
+    {
+      "from_type": "hotfix_sprint",
+      "to_type": "refactoring",
+      "title": "Firefighting Settled Into Stabilization",
+      "confidence_bucket": "high",
+      "confidence_score": 0.89,
+      "signal_count_min": 3
+    }
+  ],
+  "risks": [
+    {
+      "title": "Critical Bus Factor — Entire Repository is Single-Author",
+      "severity": "high"
+    },
+    {
+      "title": "Production Instability Detected",
+      "severity": "high"
+    },
+    {
+      "title": "Quality Gap — Feature Push Followed by Hotfix",
+      "severity": "high"
+    }
+  ]
+}

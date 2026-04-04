@@ -1,0 +1,60 @@
+{
+  "phase_count": 2,
+  "canonical_phase_count": 2,
+  "phase_sequence": [
+    "feature_development",
+    "refactoring"
+  ],
+  "phases": [
+    {
+      "type": "feature_development",
+      "confidence_bucket": "medium",
+      "confidence_range": [
+        0.6,
+        0.7
+      ],
+      "active_signals": [
+        "feature_push"
+      ],
+      "dominant_signal": "feature_push",
+      "signal_expectations": {
+        "feature_push": {
+          "min": 0.9
+        }
+      }
+    },
+    {
+      "type": "refactoring",
+      "confidence_bucket": "medium",
+      "confidence_range": [
+        0.5,
+        0.6
+      ],
+      "active_signals": [
+        "tech_debt_payoff"
+      ],
+      "dominant_signal": "tech_debt_payoff",
+      "signal_expectations": {
+        "tech_debt_payoff": {
+          "min": 0.9
+        }
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "from_type": "feature_development",
+      "to_type": "refactoring",
+      "title": "Growth Shifted Into Consolidation",
+      "confidence_bucket": "high",
+      "confidence_score": 0.9,
+      "signal_count_min": 3
+    }
+  ],
+  "risks": [
+    {
+      "title": "Quality Erosion — No Test Coverage in High-Churn Phase",
+      "severity": "medium"
+    }
+  ]
+}

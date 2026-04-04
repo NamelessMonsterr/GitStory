@@ -1,0 +1,12 @@
+frag001|alice|alice@example.com|1704067200|fix bug A
+2	4	src/auth.py
+frag002|alice|alice@example.com|1704070800|fix bug B
+2	4	src/auth.py
+frag003|alice|alice@example.com|1704164400|fix bug C
+2	4	src/auth.py
+frag004|alice|alice@example.com|1704168000|fix bug D
+2	4	src/auth.py
+frag005|alice|alice@example.com|1704261600|fix bug E
+2	4	src/auth.py
+frag006|alice|alice@example.com|1704265200|fix bug F
+2	4	src/auth.py

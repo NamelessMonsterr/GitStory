@@ -1,0 +1,5 @@
+not-enough-fields
+abc123|alice|alice@example.com|not-a-timestamp|broken line
+3	1	orphan_numstat.py
+
+  	

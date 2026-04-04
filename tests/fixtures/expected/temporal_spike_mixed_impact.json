@@ -1,0 +1,24 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "documentation"
+  ],
+  "phases": [
+    {
+      "type": "documentation",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.2,
+        0.4
+      ],
+      "pressure_expectations": {
+        "temporal_urgency": {
+          "max": 0.15
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": []
+}

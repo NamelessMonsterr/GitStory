@@ -1,0 +1,14 @@
+ambig001|alice|alice@example.com|1705309200|2024-01-15T09:00:00+00:00|add login shell flow
+20	3	src/login.py
+ambig002|alice|alice@example.com|1705327200|2024-01-15T14:00:00+00:00|fix auth bug quickly
+8	6	src/auth.py
+ambig003|alice|alice@example.com|1705345200|2024-01-15T19:00:00+00:00|refactor cache layer now
+10	11	src/cache.py
+ambig004|alice|alice@example.com|1705363200|2024-01-16T00:00:00+00:00|docs onboarding guide refresh
+6	1	docs/onboarding.md
+ambig005|alice|alice@example.com|1705381200|2024-01-16T05:00:00+00:00|deploy pipeline config update
+5	2	.github/workflows/deploy.yml
+ambig006|alice|alice@example.com|1705399200|2024-01-16T10:00:00+00:00|add session audit trail
+14	3	src/audit.py
+ambig007|alice|alice@example.com|1705417200|2024-01-16T15:00:00+00:00|docs operator runbook update
+5	1	docs/runbook.md

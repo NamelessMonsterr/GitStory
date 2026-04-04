@@ -1,0 +1,37 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "infrastructure"
+  ],
+  "phases": [
+    {
+      "type": "infrastructure",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.0,
+        0.4
+      ],
+      "active_signals": [
+        "maintenance_cleanup"
+      ],
+      "dominant_signal": "maintenance_cleanup",
+      "signal_expectations": {
+        "urgency_pressure": {
+          "max": 0.1
+        },
+        "documentation_push": {
+          "max": 0.35
+        },
+        "maintenance_cleanup": {
+          "min": 0.55
+        },
+        "stabilization": {
+          "max": 0.35
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": []
+}

@@ -142,6 +142,56 @@ class TestGapDetection:
         phases = analysis.run()
         assert len(phases) == 1
 
+    def test_change_point_detects_clear_intent_shift_without_time_gap(self):
+        feature_commits = _make_commits(
+            [f"add dashboard widget {i}" for i in range(8)],
+            interval_hours=1.0,
+            files=[("src/dashboard.py", 8, 1, "M")],
+        )
+        bugfix_commits = _make_commits(
+            [f"fix auth crash {i}" for i in range(8)],
+            interval_hours=1.0,
+            files=[("src/auth.py", 2, 4, "M")],
+        )
+
+        base = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        commits = []
+        for idx, commit in enumerate(feature_commits + bugfix_commits):
+            commit.timestamp = base + timedelta(hours=idx)
+            commits.append(commit)
+
+        analysis = DeepHistoryAnalysis(commits=commits)
+        phases = analysis.run()
+
+        assert len(phases) >= 2
+        assert phases[0].phase_type in {PhaseType.FEATURE, PhaseType.INITIAL}
+        assert phases[-1].phase_type in {PhaseType.BUGFIX, PhaseType.HOTFIX}
+
+    def test_short_middle_segment_is_merged(self):
+        base = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        commits = [
+            Commit(hash=f"a{i:04d}", author="dev", email="d@t.com",
+                   timestamp=base + timedelta(hours=i),
+                   message=f"feature {i}", author_tz_offset_hours=0.0)
+            for i in range(4)
+        ] + [
+            Commit(hash="b0000", author="dev", email="d@t.com",
+                   timestamp=base + timedelta(days=10, hours=0),
+                   message="fix typo", author_tz_offset_hours=0.0),
+            Commit(hash="b0001", author="dev", email="d@t.com",
+                   timestamp=base + timedelta(days=10, hours=1),
+                   message="fix lint", author_tz_offset_hours=0.0),
+        ] + [
+            Commit(hash=f"c{i:04d}", author="dev", email="d@t.com",
+                   timestamp=base + timedelta(days=20, hours=i),
+                   message=f"feature {i + 4}", author_tz_offset_hours=0.0)
+            for i in range(4)
+        ]
+
+        analysis = DeepHistoryAnalysis(commits=commits)
+        phases = analysis.run()
+        assert len(phases) == 2
+
 
 class TestRepoName:
     def test_default_name(self):

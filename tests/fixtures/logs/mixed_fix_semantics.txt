@@ -1,0 +1,12 @@
+mix001|alice|alice@example.com|1706086800|2024-01-24T09:00:00+00:00|fix docs typo in readme
+3	1	README.md
+mix002|alice|alice@example.com|1706090400|2024-01-24T10:00:00+00:00|fix lint config warnings
+2	1	pyproject.toml
+mix003|alice|alice@example.com|1706094000|2024-01-24T11:00:00+00:00|fix formatting in api guide
+4	1	docs/api.md
+mix004|alice|alice@example.com|1706097600|2024-01-24T12:00:00+00:00|fix comment wording in docs
+2	0	docs/guide.md
+mix005|alice|alice@example.com|1706101200|2024-01-24T13:00:00+00:00|fix deployment config spacing
+1	1	.github/workflows/ci.yml
+mix006|alice|alice@example.com|1706104800|2024-01-24T14:00:00+00:00|fix readme code example
+3	1	README.md

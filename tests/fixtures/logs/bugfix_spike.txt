@@ -1,0 +1,32 @@
+feat0001|alice|alice@example.com|1704099600|2024-01-01T09:00:00+00:00|add dashboard shell
+80	10	src/dashboard_shell.py
+feat0002|alice|alice@example.com|1704121200|2024-01-01T15:00:00+00:00|add dashboard filters
+70	8	src/dashboard_filters.py
+feat0003|bob|bob@example.com|1704142800|2024-01-01T21:00:00+00:00|add reporting widgets
+90	12	src/reporting_widgets.py
+feat0004|alice|alice@example.com|1704164400|2024-01-02T03:00:00+00:00|add analytics cards
+75	9	src/analytics_cards.py
+feat0005|bob|bob@example.com|1704186000|2024-01-02T09:00:00+00:00|add export actions
+65	7	src/export_actions.py
+feat0006|alice|alice@example.com|1704207600|2024-01-02T15:00:00+00:00|add trend charts
+85	11	src/trend_charts.py
+feat0007|bob|bob@example.com|1704229200|2024-01-02T21:00:00+00:00|add team overview
+78	9	src/team_overview.py
+feat0008|alice|alice@example.com|1704250800|2024-01-03T03:00:00+00:00|add account insights
+82	10	src/account_insights.py
+fix0001|alice|alice@example.com|1704621600|2024-01-07T10:00:00+00:00|fix auth crash quickly
+6	4	src/auth.py
+fix0002|alice|alice@example.com|1704628800|2024-01-07T12:00:00+00:00|fix login error quickly
+5	4	src/auth.py
+fix0003|alice|alice@example.com|1704636000|2024-01-07T14:00:00+00:00|patch checkout bug now
+4	3	src/auth.py
+fix0004|alice|alice@example.com|1704643200|2024-01-07T16:00:00+00:00|hotfix token issue now
+5	4	src/auth.py
+fix0005|alice|alice@example.com|1704650400|2024-01-07T18:00:00+00:00|fix session bug now
+5	4	src/auth.py
+fix0006|alice|alice@example.com|1704657600|2024-01-07T20:00:00+00:00|fix auth timeout now
+6	5	src/auth.py
+fix0007|alice|alice@example.com|1704664800|2024-01-07T22:00:00+00:00|patch auth race now
+4	4	src/auth.py
+fix0008|alice|alice@example.com|1704672000|2024-01-08T00:00:00+00:00|fix checkout crash now
+6	4	src/auth.py

@@ -1,0 +1,10 @@
+ccc|alice|alice@example.com|1704067200|2024-01-01T00:00:00+00:00|third by hash
+1	0	src/c.py
+|alice|alice@example.com|1704067200|2024-01-01T00:00:00+00:00|missing hash should sort first
+1	0	src/missing.py
+aaa|alice|alice@example.com|1704067200|2024-01-01T00:00:00+00:00|first aaa
+1	0	src/a1.py
+bbb|alice|alice@example.com|1704067200|2024-01-01T00:00:00+00:00|middle hash
+1	0	src/b.py
+aaa|alice|alice@example.com|1704067200|2024-01-01T00:00:00+00:00|second aaa keeps source order
+1	0	src/a2.py

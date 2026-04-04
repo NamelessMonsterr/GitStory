@@ -108,6 +108,39 @@ class TestFromLogTextBasic:
         assert commits[0].message == "first"
         assert commits[1].message == "second"
 
+    def test_same_timestamp_uses_hash_then_source_order(self):
+        log = (
+            "ccc|alice|a@t.com|1704067200|third by hash\n"
+            "|alice|a@t.com|1704067200|missing hash should sort first\n"
+            "aaa|alice|a@t.com|1704067200|first aaa\n"
+            "bbb|alice|a@t.com|1704067200|middle hash\n"
+            "aaa|alice|a@t.com|1704067200|second aaa keeps source order\n"
+        )
+        commits = GitParser.from_log_text(log)
+        assert [commit.hash for commit in commits] == ["", "aaa", "aaa", "bbb", "ccc"]
+        assert [commit.message for commit in commits[:3]] == [
+            "missing hash should sort first",
+            "first aaa",
+            "second aaa keeps source order",
+        ]
+
+    def test_same_timestamp_orders_by_hash(self):
+        log = (
+            "fff|bob|b@t.com|1704067200|second\n"
+            "aaa|alice|a@t.com|1704067200|first\n"
+        )
+        commits = GitParser.from_log_text(log)
+        assert [commit.hash for commit in commits] == ["aaa", "fff"]
+        assert [commit.message for commit in commits] == ["first", "second"]
+
+    def test_missing_hash_normalizes_to_empty_string(self):
+        log = (
+            "|bob|b@t.com|1704067200|second\n"
+            "aaa|alice|a@t.com|1704067200|first\n"
+        )
+        commits = GitParser.from_log_text(log)
+        assert [commit.hash for commit in commits] == ["", "aaa"]
+
     def test_stdin_files_get_status_U(self):
         log = "abc123|alice|a@t.com|1704067200|init\n10\t0\tREADME.md\n"
         commits = GitParser.from_log_text(log)
@@ -202,3 +235,20 @@ class TestFromLogTextPipeInSubject:
         commits = GitParser.from_log_text(log)
         assert commits[0].message == "fix | thing"
         assert len(commits[0].file_changes) == 1
+
+
+class TestDeterministicTieBreaking:
+    def test_same_timestamp_same_hash_is_stable_across_runs(self):
+        log = (
+            "abc|alice|a@t.com|1704067200|first variant\n"
+            "abc|alice|a@t.com|1704067200|second variant\n"
+            "abc|alice|a@t.com|1704067200|third variant\n"
+        )
+        baseline = [
+            commit.message for commit in GitParser.from_log_text(log)
+        ]
+
+        for _ in range(5):
+            assert [
+                commit.message for commit in GitParser.from_log_text(log)
+            ] == baseline

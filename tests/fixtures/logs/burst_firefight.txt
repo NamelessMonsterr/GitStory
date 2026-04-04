@@ -1,0 +1,12 @@
+bf001|alice|alice@example.com|1705017600|fix auth crash now
+1	4	src/auth/login.py
+bf002|alice|alice@example.com|1705018200|patch payment failure now
+1	4	src/payment/checkout.py
+bf003|alice|alice@example.com|1705018800|hotfix broken checkout redirect
+1	3	src/payment/router.py
+bf004|alice|alice@example.com|1705019400|handle null pointer in invoice flow
+1	4	src/payment/invoice.py
+bf005|alice|alice@example.com|1705020000|fix session panic now
+1	4	src/auth/session.py
+bf006|alice|alice@example.com|1705020600|rollback broken auth guard
+1	4	src/auth/guard.py

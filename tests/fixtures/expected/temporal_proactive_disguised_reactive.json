@@ -1,0 +1,30 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "mixed"
+  ],
+  "phases": [
+    {
+      "type": "mixed",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.2,
+        0.4
+      ],
+      "active_signals": [
+        "planned_resilience"
+      ],
+      "pressure_expectations": {
+        "temporal_urgency": {
+          "max": 0.1
+        },
+        "proactive_ratio": {
+          "min": 0.6
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": []
+}

@@ -7,7 +7,11 @@ from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 
 from core.models import Commit, FileChange
-from core.pattern_detector import PatternDetector
+from core.pattern_detector import (
+    MAX_KEYWORD_HITS_PER_CATEGORY,
+    PatternDetector,
+    _keyword_score,
+)
 
 
 def _make_commit(
@@ -64,6 +68,52 @@ class TestClassifyCommit:
         assert PatternDetector.classify_commit(
             _make_commit("update readme with examples")
         ) == "documentation"
+
+    def test_fix_pipeline_is_infrastructure(self):
+        c = _make_commit(
+            "fix pipeline config",
+            files=[(".github/workflows/ci.yml", 2, 1, "M")],
+        )
+        assert PatternDetector.classify_commit(c) == "infrastructure"
+
+    def test_fix_formatting_is_refactor(self):
+        c = _make_commit(
+            "fix formatting in dashboard",
+            files=[("src/dashboard.py", 3, 2, "M")],
+        )
+        assert PatternDetector.classify_commit(c) == "refactor"
+
+    def test_fix_readme_bug_is_documentation(self):
+        c = _make_commit(
+            "fix readme formatting bug",
+            files=[("README.md", 4, 1, "M")],
+        )
+        assert PatternDetector.classify_commit(c) == "documentation"
+
+    def test_handle_null_pointer_is_bugfix_without_fix_keyword(self):
+        c = _make_commit(
+            "handle null pointer in payment flow",
+            files=[("src/payment/checkout.py", 2, 4, "M")],
+        )
+        assert PatternDetector.classify_commit(c) == "bugfix"
+
+    def test_guard_edge_case_is_bugfix_without_fix_keyword(self):
+        c = _make_commit(
+            "guard edge case in auth callback",
+            files=[("src/auth/callback.py", 1, 3, "M")],
+        )
+        assert PatternDetector.classify_commit(c) == "bugfix"
+
+    def test_retry_logic_in_checkout_is_bugfix_not_feature(self):
+        c = _make_commit(
+            "add retry logic for checkout",
+            files=[("src/payment/retry.py", 2, 3, "M")],
+        )
+        assert PatternDetector.classify_commit(c) == "bugfix"
+
+    def test_keyword_score_saturates(self):
+        words = {"fix", "bug", "patch", "hotfix", "error"}
+        assert _keyword_score(words, frozenset(words)) == MAX_KEYWORD_HITS_PER_CATEGORY
 
     def test_ambiguous_defaults_to_feature(self):
         assert PatternDetector.classify_commit(
@@ -280,10 +330,232 @@ class TestPressureSignals:
         result = PatternDetector.detect_pressure_signals(commits)
         assert result["fix_density"] > 0.6
 
+    def test_fix_diversity_penalizes_repeated_single_token(self):
+        commits = [
+            _make_commit("fix fix fix"),
+            _make_commit("fix fix fix", hours_offset=1),
+            _make_commit("fix fix fix", hours_offset=2),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["fix_density"] >= 0.7
+        assert result["fix_diversity"] < 0.3
+        assert result["fix_pressure"] < result["fix_density"]
+
+    def test_fix_diversity_stays_high_for_richer_bugfix_language(self):
+        commits = [
+            _make_commit("fix login bug"),
+            _make_commit("patch crash regression", hours_offset=1),
+            _make_commit("hotfix broken auth flow", hours_offset=2),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["fix_density"] == 1.0
+        assert result["fix_diversity"] >= 0.75
+        assert result["fix_pressure"] >= 0.5
+
+    def test_cleanup_fix_commits_have_low_semantic_alignment(self):
+        commits = [
+            _make_commit(
+                "fix pipeline config",
+                files=[(".github/workflows/ci.yml", 1, 1, "M")],
+            ),
+            _make_commit(
+                "fix formatting",
+                hours_offset=1,
+                files=[("src/dashboard.py", 1, 1, "M")],
+            ),
+            _make_commit(
+                "fix docs wording",
+                hours_offset=2,
+                files=[("docs/guide.md", 1, 1, "M")],
+            ),
+            _make_commit(
+                "fix flaky test",
+                hours_offset=3,
+                files=[("tests/test_auth.py", 1, 1, "M")],
+            ),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["semantic_alignment"] < 0.3
+        assert result["cleanup_bias"] > 0.7
+        assert result["fix_pressure"] < 0.2
+
+    def test_clustered_product_bugfixes_have_coherence(self):
+        commits = [
+            _make_commit(
+                "fix auth crash",
+                files=[("src/auth/login.py", 2, 4, "M")],
+            ),
+            _make_commit(
+                "patch broken auth token",
+                hours_offset=1,
+                files=[("src/auth/token.py", 2, 3, "M")],
+            ),
+            _make_commit(
+                "hotfix auth redirect bug",
+                hours_offset=2,
+                files=[("src/auth/router.py", 1, 4, "M")],
+            ),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["semantic_alignment"] == 1.0
+        assert result["fix_coherence"] >= 0.66
+        assert result["fix_pressure"] >= 0.8
+
+    def test_implicit_bug_signals_raise_pressure_for_silent_critical_work(self):
+        commits = [
+            _make_commit(
+                "handle null pointer in payment flow",
+                hours_offset=0,
+                files=[("src/payment/checkout.py", 1, 4, "M")],
+            ),
+            _make_commit(
+                "add retry logic for checkout",
+                hours_offset=1,
+                files=[("src/payment/retry.py", 2, 3, "M")],
+            ),
+            _make_commit(
+                "guard edge case in auth callback",
+                hours_offset=2,
+                files=[("src/auth/callback.py", 1, 3, "M")],
+            ),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["implicit_fix_density"] >= 0.6
+        assert result["impact_weight"] >= 0.8
+        assert result["cleanup_bias"] <= 0.2
+
+    def test_distributed_cleanup_keeps_low_impact_and_low_pressure(self):
+        commits = [
+            _make_commit("fix lint in api", hours_offset=0, files=[("src/api.py", 1, 1, "M")]),
+            _make_commit("fix formatting in ui", hours_offset=1, files=[("src/ui.py", 1, 1, "M")]),
+            _make_commit("fix style in db", hours_offset=2, files=[("src/db.py", 1, 1, "M")]),
+            _make_commit("fix lint in cache", hours_offset=3, files=[("src/cache.py", 1, 1, "M")]),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["impact_weight"] <= 0.3
+        assert result["cleanup_bias"] >= 0.7
+        assert result["fix_pressure"] <= 0.15
+
+    def test_proactive_resilience_prefers_proactive_over_reactive_pressure(self):
+        commits = [
+            _make_commit(
+                "add retry logic for payment refresh",
+                hours_offset=0,
+                files=[("src/payment/retry.py", 3, 1, "M")],
+            ),
+            _make_commit(
+                "improve error handling in checkout",
+                hours_offset=2,
+                files=[("src/payment/checkout.py", 3, 1, "M")],
+            ),
+            _make_commit(
+                "add fallback for auth failures",
+                hours_offset=4,
+                files=[("src/auth/fallback.py", 3, 1, "M")],
+            ),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["proactive_ratio"] > result["reactive_ratio"]
+        assert result["proactive_pressure"] > result["reactive_pressure"]
+        assert result["burst_pressure"] < 0.35
+
+    def test_burst_pressure_detects_compressed_firefight(self):
+        compressed = [
+            _make_commit("fix auth crash now", hours_offset=0, files=[("src/auth.py", 1, 4, "M")]),
+            _make_commit("patch session failure now", hours_offset=0, files=[("src/session.py", 1, 4, "M")]),
+            _make_commit("hotfix broken checkout redirect", hours_offset=0, files=[("src/checkout.py", 1, 4, "M")]),
+            _make_commit("fix payment crash now", hours_offset=1, files=[("src/payment.py", 1, 4, "M")]),
+        ]
+        spaced = [
+            _make_commit("fix auth crash now", hours_offset=0, files=[("src/auth.py", 1, 4, "M")]),
+            _make_commit("patch session failure now", hours_offset=12, files=[("src/session.py", 1, 4, "M")]),
+            _make_commit("hotfix broken checkout redirect", hours_offset=24, files=[("src/checkout.py", 1, 4, "M")]),
+            _make_commit("fix payment crash now", hours_offset=36, files=[("src/payment.py", 1, 4, "M")]),
+        ]
+        compressed_result = PatternDetector.detect_pressure_signals(compressed)
+        spaced_result = PatternDetector.detect_pressure_signals(spaced)
+        assert compressed_result["burst_pressure"] > spaced_result["burst_pressure"]
+        assert compressed_result["reactive_pressure"] > spaced_result["reactive_pressure"]
+
+    def test_alternation_score_rises_for_switching_intents(self):
+        commits = [
+            _make_commit("add dashboard widget", hours_offset=0, files=[("src/dashboard.py", 4, 1, "M")]),
+            _make_commit("fix dashboard crash", hours_offset=1, files=[("src/dashboard.py", 1, 4, "M")]),
+            _make_commit("add audit export", hours_offset=2, files=[("src/export.py", 4, 1, "M")]),
+            _make_commit("handle null pointer in export flow", hours_offset=3, files=[("src/export.py", 1, 4, "M")]),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["alternation_score"] >= 0.6
+
+    def test_conflict_alternation_ignores_maintenance_only_switches(self):
+        commits = [
+            _make_commit("fix docs wording", hours_offset=0, files=[("docs/guide.md", 1, 1, "M")]),
+            _make_commit("fix lint warnings", hours_offset=1, files=[("src/api.py", 1, 1, "M")]),
+            _make_commit("update ci config", hours_offset=2, files=[(".github/workflows/ci.yml", 1, 1, "M")]),
+            _make_commit("fix readme format", hours_offset=3, files=[("README.md", 1, 1, "M")]),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["raw_alternation_score"] >= 0.75
+        assert result["alternation_score"] < 0.4
+
+    def test_conflict_alternation_weights_feature_bug_above_feature_cleanup(self):
+        feature_bug = [
+            _make_commit("add dashboard widget", hours_offset=0, files=[("src/dashboard.py", 4, 1, "M")]),
+            _make_commit("fix dashboard crash", hours_offset=1, files=[("src/dashboard.py", 1, 4, "M")]),
+            _make_commit("add export page", hours_offset=2, files=[("src/export.py", 4, 1, "M")]),
+            _make_commit("patch export timeout", hours_offset=3, files=[("src/export.py", 1, 4, "M")]),
+        ]
+        feature_cleanup = [
+            _make_commit("add dashboard widget", hours_offset=0, files=[("src/dashboard.py", 4, 1, "M")]),
+            _make_commit("fix docs wording", hours_offset=1, files=[("docs/guide.md", 1, 1, "M")]),
+            _make_commit("add export page", hours_offset=2, files=[("src/export.py", 4, 1, "M")]),
+            _make_commit("fix lint warnings", hours_offset=3, files=[("src/export.py", 1, 1, "M")]),
+        ]
+        feature_bug_result = PatternDetector.detect_pressure_signals(feature_bug)
+        feature_cleanup_result = PatternDetector.detect_pressure_signals(feature_cleanup)
+        assert feature_bug_result["alternation_score"] > feature_cleanup_result["alternation_score"]
+
+    def test_temporal_noise_filter_dampens_cleanup_bursts(self):
+        commits = [
+            _make_commit("fix docs typo", hours_offset=0, files=[("docs/guide.md", 1, 1, "M")]),
+            _make_commit("fix lint warnings", hours_offset=0, files=[("src/api.py", 1, 1, "M")]),
+            _make_commit("fix formatting", hours_offset=0, files=[("src/ui.py", 1, 1, "M")]),
+            _make_commit("fix ci config", hours_offset=1, files=[(".github/workflows/ci.yml", 1, 1, "M")]),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["raw_burst_pressure"] > 0.4
+        assert result["burst_pressure"] < 0.2
+        assert result["temporal_urgency"] == 0.0
+
+    def test_scattered_product_bugfixes_do_not_look_like_crisis(self):
+        commits = [
+            _make_commit("fix api timeout", files=[("src/api.py", 2, 3, "M")]),
+            _make_commit("fix ui overflow", hours_offset=1, files=[("src/ui.py", 2, 3, "M")]),
+            _make_commit("fix cache invalidation", hours_offset=2, files=[("src/cache.py", 2, 3, "M")]),
+            _make_commit("fix db cursor", hours_offset=3, files=[("src/db.py", 2, 3, "M")]),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["semantic_alignment"] == 1.0
+        assert result["fix_coherence"] < 0.5
+        assert result["fix_pressure"] < 0.4
+
+    def test_no_file_bugfixes_default_to_full_coherence(self):
+        commits = [
+            _make_commit("fix login bug"),
+            _make_commit("patch crash regression", hours_offset=1),
+            _make_commit("hotfix broken auth flow", hours_offset=2),
+        ]
+        result = PatternDetector.detect_pressure_signals(commits)
+        assert result["fix_coherence"] >= 0.55
+
     def test_empty(self):
         result = PatternDetector.detect_pressure_signals([])
         assert result["short_messages"] == 0.0
         assert result["late_night_available"] is False
+        assert result["fix_diversity"] == 0.0
+        assert result["fix_pressure"] == 0.0
+        assert result["semantic_alignment"] == 0.0
+        assert result["fix_coherence"] == 0.0
 
     def test_all_long_messages_low_pressure(self):
         commits = [

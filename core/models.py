@@ -78,6 +78,7 @@ class Commit:
     message: str
     file_changes: list[FileChange] = field(default_factory=list)
     author_tz_offset_hours: Optional[float] = None
+    _source_index: int = field(default=0, repr=False, compare=False)
 
     @property
     def total_additions(self) -> int:
@@ -102,6 +103,10 @@ class Commit:
     @property
     def tz_known(self) -> bool:
         return self.author_tz_offset_hours is not None
+
+    @property
+    def source_index(self) -> int:
+        return self._source_index
 
 
 @dataclass
@@ -157,6 +162,7 @@ class IntentInference:
     intent_summary: str
     confidence: Confidence
     confidence_score: float = 0.0  # 0.0–1.0 numeric score
+    signal_scores: dict[str, float] = field(default_factory=dict)
     reasoning: list[str] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
     observation: str = ""

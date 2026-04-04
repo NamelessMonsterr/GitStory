@@ -1,0 +1,6 @@
+this is not a commit line
+10	2	src/orphan.py
+not|enough|fields
+0000000000000000000000000000000000000801|ivy|ivy@example.com|badts|2024-02-01T00:00:00+00:00|broken timestamp
+0000000000000000000000000000000000000802|ivy|ivy@example.com|1706745600|2024-02-01T00:00:00+00:00|valid fallback commit
+3	1	src/recovered.py

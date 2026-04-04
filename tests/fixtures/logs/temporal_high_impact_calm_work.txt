@@ -1,0 +1,12 @@
+calm001|alice|alice@example.com|1704067200|refactor payment service
+14	10	src/payment/service.py
+calm002|alice|alice@example.com|1704110400|rewrite auth module
+12	9	src/auth/module.py
+calm003|alice|alice@example.com|1704153600|optimize db queries
+10	8	src/db/queries.py
+calm004|alice|alice@example.com|1704196800|improve caching layer
+9	7	src/cache/layer.py
+calm005|alice|alice@example.com|1704240000|refactor billing workflow
+13	9	src/billing/workflow.py
+calm006|alice|alice@example.com|1704283200|optimize search indexing
+11	8	src/search/index.py

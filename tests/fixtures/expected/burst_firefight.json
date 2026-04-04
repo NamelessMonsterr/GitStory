@@ -1,0 +1,37 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "hotfix_sprint"
+  ],
+  "phases": [
+    {
+      "type": "hotfix_sprint",
+      "confidence_bucket": "medium",
+      "confidence_range": [
+        0.36,
+        0.46
+      ],
+      "active_signals": [
+        "urgency_pressure"
+      ],
+      "dominant_signal": null,
+      "signal_expectations": {
+        "urgency_pressure": {
+          "min": 0.37,
+          "max": 0.47
+        },
+        "planned_resilience": {
+          "max": 0.05
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": [
+    {
+      "title": "Production Instability Detected",
+      "severity": "high"
+    }
+  ]
+}

@@ -48,6 +48,11 @@ def _looks_like_iso_date(s: str) -> bool:
     return bool(_ISO_DATE_PATTERN.match(s.strip()))
 
 
+def _commit_sort_key(commit: Commit) -> tuple[datetime, str, int]:
+    """Provide a total ordering for commits, even on equal timestamps."""
+    return (commit.timestamp, commit.hash or "", commit.source_index)
+
+
 class GitParser:
     """Parses a local git repository into a list of Commit objects."""
 
@@ -78,8 +83,7 @@ class GitParser:
                 if fc.path in statuses:
                     fc.status = statuses[fc.path]
 
-        commits.sort(key=lambda c: c.timestamp)
-        return commits
+        return sorted(commits, key=_commit_sort_key)
 
     @classmethod
     def from_log_text(cls, log_text: str) -> list[Commit]:
@@ -101,7 +105,7 @@ class GitParser:
         commits: list[Commit] = []
         current: Optional[Commit] = None
 
-        for raw_line in log_text.strip().splitlines():
+        for source_index, raw_line in enumerate(log_text.strip().splitlines()):
             line = raw_line.strip()
             if not line:
                 continue
@@ -147,17 +151,17 @@ class GitParser:
                 message = "|".join(raw_parts[4:])  # rejoin ALL remaining parts
 
             current = Commit(
-                hash=raw_parts[0],
+                hash=raw_parts[0] or "",
                 author=raw_parts[1],
                 email=raw_parts[2],
                 timestamp=datetime.fromtimestamp(ts, tz=timezone.utc),
                 message=message,
                 author_tz_offset_hours=tz_offset,
+                _source_index=source_index,
             )
             commits.append(current)
 
-        commits.sort(key=lambda c: c.timestamp)
-        return commits
+        return sorted(commits, key=_commit_sort_key)
 
     # ── Private ──────────────────────────────────────────────────
 
@@ -195,7 +199,7 @@ class GitParser:
 
     def _parse_log_lines(self, raw: str) -> list[Commit]:
         commits: list[Commit] = []
-        for line in raw.strip().splitlines():
+        for source_index, line in enumerate(raw.strip().splitlines()):
             line = line.strip()
             if not line:
                 continue
@@ -208,12 +212,13 @@ class GitParser:
                 continue
             commits.append(
                 Commit(
-                    hash=parts[0],
+                    hash=parts[0] or "",
                     author=parts[1],
                     email=parts[2],
                     timestamp=datetime.fromtimestamp(ts, tz=timezone.utc),
                     message=parts[5],
                     author_tz_offset_hours=_parse_tz_offset(parts[4]),
+                    _source_index=source_index,
                 )
             )
         return commits

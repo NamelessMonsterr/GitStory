@@ -1,0 +1,12 @@
+churn001|alice|alice@example.com|1705654800|2024-01-19T09:00:00+00:00|add feature flag gate
+20	2	src/feature_flag.py
+churn002|alice|alice@example.com|1705669200|2024-01-19T13:00:00+00:00|remove feature flag gate
+2	30	src/feature_flag.py
+churn003|alice|alice@example.com|1705683600|2024-01-19T17:00:00+00:00|restore feature flag gate
+18	8	src/feature_flag.py
+churn004|alice|alice@example.com|1705698000|2024-01-19T21:00:00+00:00|patch feature flag gate
+6	8	src/feature_flag.py
+churn005|alice|alice@example.com|1705712400|2024-01-20T01:00:00+00:00|rewrite feature flag gate
+8	20	src/feature_flag.py
+churn006|alice|alice@example.com|1705726800|2024-01-20T05:00:00+00:00|toggle feature flag again
+4	12	src/feature_flag.py

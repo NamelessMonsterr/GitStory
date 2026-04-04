@@ -125,6 +125,17 @@ class TestCommit:
         assert c.total_deletions == 0
         assert c.files_touched == 0
 
+    def test_source_index_property(self):
+        c = Commit(
+            hash="abc",
+            author="dev",
+            email="dev@t.com",
+            timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            message="test",
+            _source_index=7,
+        )
+        assert c.source_index == 7
+
 
 class TestPhase:
     def test_duration_days(self):
@@ -216,6 +227,7 @@ class TestAnalysisResult:
                     intent_summary="test",
                     confidence=Confidence.HIGH,
                     confidence_score=0.85,
+                    signal_scores={"urgency_pressure": 0.72},
                     evidence=[
                         Evidence(signal="test_signal", detail="detail", commits_involved=3)
                     ],
@@ -226,6 +238,7 @@ class TestAnalysisResult:
         parsed = json.loads(json_str)
         assert parsed["inferences"][0]["confidence"] == "high"
         assert parsed["inferences"][0]["confidence_score"] == 0.85
+        assert parsed["inferences"][0]["signal_scores"]["urgency_pressure"] == 0.72
 
     def test_to_json_contains_transitions(self):
         result = AnalysisResult(
@@ -256,3 +269,31 @@ class TestAnalysisResult:
         assert parsed["transitions"][0]["from_phase_number"] == 1
         assert parsed["transitions"][0]["to_phase_number"] == 2
         assert parsed["transitions"][0]["confidence"] == "high"
+
+    def test_internal_commit_sort_state_not_serialized(self):
+        commit = Commit(
+            hash="abc",
+            author="dev",
+            email="dev@t.com",
+            timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            message="test",
+            _source_index=9,
+        )
+        phase = Phase(
+            phase_number=1,
+            phase_type=PhaseType.FEATURE,
+            start_date=commit.timestamp,
+            end_date=commit.timestamp,
+            commits=[commit],
+        )
+        result = AnalysisResult(
+            repo_name="serialize-commit",
+            total_commits=1,
+            date_range_start=commit.timestamp,
+            date_range_end=commit.timestamp,
+            unique_authors=["dev"],
+            phases=[phase],
+        )
+
+        parsed = json.loads(result.to_json())
+        assert "_source_index" not in parsed["phases"][0]["commits"][0]

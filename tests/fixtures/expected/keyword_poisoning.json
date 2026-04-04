@@ -1,0 +1,31 @@
+{
+  "phase_count": 1,
+  "canonical_phase_count": 1,
+  "phase_sequence": [
+    "documentation"
+  ],
+  "phases": [
+    {
+      "type": "documentation",
+      "confidence_bucket": "low",
+      "confidence_range": [
+        0.25,
+        0.4
+      ],
+      "active_signals": [
+        "maintenance_cleanup"
+      ],
+      "dominant_signal": "maintenance_cleanup",
+      "signal_expectations": {
+        "documentation_push": {
+          "min": 0.8
+        },
+        "maintenance_cleanup": {
+          "min": 0.5
+        }
+      }
+    }
+  ],
+  "transitions": [],
+  "risks": []
+}

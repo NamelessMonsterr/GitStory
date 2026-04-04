@@ -1,0 +1,24 @@
+conf001|alice|alice@example.com|1704067200|add feature A
+8	1	src/a.py
+conf002|alice|alice@example.com|1704068100|fix bug in A
+2	4	src/a.py
+conf003|alice|alice@example.com|1704069000|add feature B
+8	1	src/b.py
+conf004|alice|alice@example.com|1704069900|fix crash in B
+2	4	src/b.py
+conf005|alice|alice@example.com|1704070800|add feature C
+8	1	src/c.py
+conf006|alice|alice@example.com|1704071700|fix failure in C
+2	4	src/c.py
+conf007|alice|alice@example.com|1704072600|add feature D
+8	1	src/d.py
+conf008|alice|alice@example.com|1704073500|patch error in D
+2	4	src/d.py
+conf009|alice|alice@example.com|1704074400|add feature E
+8	1	src/e.py
+conf010|alice|alice@example.com|1704075300|fix broken E state
+2	4	src/e.py
+conf011|alice|alice@example.com|1704076200|add feature F
+8	1	src/f.py
+conf012|alice|alice@example.com|1704077100|hotfix failure in F
+2	4	src/f.py

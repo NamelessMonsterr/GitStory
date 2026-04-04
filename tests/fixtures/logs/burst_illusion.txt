@@ -1,0 +1,20 @@
+burst001|alice|alice@example.com|1706086800|2024-01-24T09:00:00+00:00|sync branch before review
+2	2	src/a.py
+burst002|bob|bob@example.com|1706088600|2024-01-24T09:30:00+00:00|align state for merge
+2	2	src/b.py
+burst003|alice|alice@example.com|1706090400|2024-01-24T10:00:00+00:00|prepare batch for review
+2	2	src/c.py
+burst004|bob|bob@example.com|1706092200|2024-01-24T10:30:00+00:00|sync branch after review
+2	2	src/d.py
+burst005|alice|alice@example.com|1706094000|2024-01-24T11:00:00+00:00|align state after merge
+2	2	src/e.py
+burst006|bob|bob@example.com|1706095800|2024-01-24T11:30:00+00:00|prepare batch after review
+2	2	src/f.py
+burst007|alice|alice@example.com|1706097600|2024-01-24T12:00:00+00:00|sync branch for cleanup
+2	2	src/g.py
+burst008|bob|bob@example.com|1706099400|2024-01-24T12:30:00+00:00|align state for review
+2	2	src/h.py
+burst009|alice|alice@example.com|1706101200|2024-01-24T13:00:00+00:00|prepare batch for merge
+2	2	src/i.py
+burst010|bob|bob@example.com|1706103000|2024-01-24T13:30:00+00:00|sync branch before merge
+2	2	src/j.py

@@ -1,0 +1,28 @@
+feat1001|alice|alice@example.com|1705309200|2024-01-15T09:00:00+00:00|add billing dashboard
+70	8	src/billing_dashboard.py
+feat1002|bob|bob@example.com|1705330800|2024-01-15T15:00:00+00:00|add subscription table
+68	9	src/subscription_table.py
+feat1003|alice|alice@example.com|1705352400|2024-01-15T21:00:00+00:00|add invoice filters
+62	7	src/invoice_filters.py
+feat1004|bob|bob@example.com|1705374000|2024-01-16T03:00:00+00:00|add renewal actions
+74	10	src/renewal_actions.py
+feat1005|alice|alice@example.com|1705395600|2024-01-16T09:00:00+00:00|add revenue widgets
+79	9	src/revenue_widgets.py
+feat1006|bob|bob@example.com|1705417200|2024-01-16T15:00:00+00:00|add cohort charts
+83	11	src/cohort_charts.py
+feat1007|alice|alice@example.com|1705438800|2024-01-16T21:00:00+00:00|add usage exports
+67	8	src/usage_exports.py
+feat1008|bob|bob@example.com|1705460400|2024-01-17T03:00:00+00:00|add plan breakdowns
+71	9	src/plan_breakdowns.py
+ref2001|alice|alice@example.com|1705831200|2024-01-21T10:00:00+00:00|refactor billing service layer
+22	34	src/billing_service.py
+ref2002|alice|alice@example.com|1705852800|2024-01-21T16:00:00+00:00|refactor invoice formatting
+18	26	src/invoice_formatting.py
+ref2003|alice|alice@example.com|1705874400|2024-01-21T22:00:00+00:00|refactor revenue math helpers
+20	30	src/revenue_math.py
+ref2004|alice|alice@example.com|1705896000|2024-01-22T04:00:00+00:00|refactor subscription projections
+21	31	src/subscription_projections.py
+ref2005|alice|alice@example.com|1705917600|2024-01-22T10:00:00+00:00|refactor billing adapters
+19	28	src/billing_adapters.py
+ref2006|alice|alice@example.com|1705939200|2024-01-22T16:00:00+00:00|refactor plan reconciler
+17	27	src/plan_reconciler.py

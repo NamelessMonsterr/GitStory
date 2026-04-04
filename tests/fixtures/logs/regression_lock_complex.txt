@@ -1,0 +1,26 @@
+lock0001|alice|alice@example.com|1704099600|2024-01-01T09:00:00+00:00|initial project scaffold
+20	0	README.md
+lock0002|alice|alice@example.com|1704114000|2024-01-01T13:00:00+00:00|create package layout
+24	2	src/__init__.py
+lock0003|alice|alice@example.com|1704128400|2024-01-01T17:00:00+00:00|add cli entrypoint
+28	3	main.py
+lock1001|alice|alice@example.com|1704452400|2024-01-05T11:00:00+00:00|add billing dashboard view
+52	6	src/billing_dashboard.py
+lock1002|bob|bob@example.com|1704466800|2024-01-05T15:00:00+00:00|add invoice export flow
+48	5	src/invoice_export.py
+lock1003|alice|alice@example.com|1704481200|2024-01-05T19:00:00+00:00|add revenue widgets now
+55	7	src/revenue_widgets.py
+lock1004|bob|bob@example.com|1704495600|2024-01-05T23:00:00+00:00|add account usage charts
+50	6	src/usage_charts.py
+lock1005|alice|alice@example.com|1704510000|2024-01-06T03:00:00+00:00|add plan breakdown panel
+46	5	src/plan_breakdown.py
+lock2001|alice|alice@example.com|1704794400|2024-01-09T10:00:00+00:00|fix billing crash now
+7	5	src/billing_service.py
+lock2002|alice|alice@example.com|1704801600|2024-01-09T12:00:00+00:00|patch invoice bug now
+6	5	src/billing_service.py
+lock2003|alice|alice@example.com|1704808800|2024-01-09T14:00:00+00:00|fix export timeout now
+7	5	src/billing_service.py
+lock2004|alice|alice@example.com|1704816000|2024-01-09T16:00:00+00:00|hotfix usage issue now
+6	4	src/billing_service.py
+lock2005|alice|alice@example.com|1704823200|2024-01-09T18:00:00+00:00|fix revenue error now
+7	5	src/billing_service.py

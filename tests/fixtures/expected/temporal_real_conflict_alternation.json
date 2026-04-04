@@ -1,0 +1,39 @@
+{
+  "phase_count_min": 2,
+  "canonical_phase_count_min": 2,
+  "phase_sequence": [
+    "feature_development",
+    "hotfix_sprint"
+  ],
+  "phases": [
+    {
+      "type": "feature_development",
+      "pressure_expectations": {
+        "alternation_score": {
+          "min": 0.6
+        }
+      }
+    },
+    {
+      "type": "hotfix_sprint",
+      "pressure_expectations": {
+        "alternation_score": {
+          "min": 0.6
+        }
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "from_type": "feature_development",
+      "to_type": "hotfix_sprint",
+      "confidence_bucket": "medium"
+    }
+  ],
+  "risk_contains": [
+    {
+      "title": "Production Instability Detected",
+      "severity": "high"
+    }
+  ]
+}

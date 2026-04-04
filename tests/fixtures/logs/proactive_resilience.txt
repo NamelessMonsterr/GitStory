@@ -1,0 +1,12 @@
+pr001|alice|alice@example.com|1704931200|add retry logic for payment refresh
+3	1	src/payment/retry.py
+pr002|alice|alice@example.com|1704938400|improve error handling in checkout
+3	1	src/payment/checkout.py
+pr003|alice|alice@example.com|1704945600|add fallback for auth failures
+3	1	src/auth/fallback.py
+pr004|alice|alice@example.com|1704952800|harden session token refresh
+2	1	src/auth/session.py
+pr005|alice|alice@example.com|1704960000|optimize failure recovery in worker
+2	1	src/worker/recovery.py
+pr006|alice|alice@example.com|1704967200|prevent stale checkout state
+2	1	src/payment/state.py
