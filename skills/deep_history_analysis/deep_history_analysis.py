@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Optional
 
+from analysis.calibration import load_calibrator
 from core.models import Commit, Phase, PhaseMetrics, PhaseType
 from core.git_parser import GitParser
 from core.pattern_detector import PatternDetector
@@ -34,6 +35,7 @@ class DeepHistoryAnalysis:
         commits: Optional[list[Commit]] = None,
         max_commits: Optional[int] = None,
     ):
+        self._calibrator = load_calibrator()
         if commits is not None:
             self.commits = commits
             self._repo_name = "unknown"
@@ -191,7 +193,7 @@ class DeepHistoryAnalysis:
                 )
                 and (
                     pressure["high_frequency"] > 0.3
-                    or temporal_urgency > 0.25
+                    or temporal_urgency > self._calibrator.temporal_hotfix_min()
                 )
                 and (
                     pressure["fix_diversity"] >= 0.5
@@ -209,7 +211,7 @@ class DeepHistoryAnalysis:
                     pressure["reactive_ratio"] >= pressure["proactive_ratio"]
                     or (
                         pressure["implicit_fix_density"] >= 0.30
-                        and temporal_urgency >= 0.45
+                        and temporal_urgency >= self._calibrator.temporal_hotfix_high()
                     )
                 )
             ):
@@ -222,17 +224,19 @@ class DeepHistoryAnalysis:
             )
             if (
                 first_pressure["alternation_score"] < 0.5
-                and first_temporal_urgency < 0.25
+                and first_temporal_urgency < self._calibrator.temporal_initial_max()
             ):
                 phases[0].phase_type = PhaseType.INITIAL
 
         return phases
 
-    @staticmethod
-    def _dominant_type(classifications: list[str]) -> PhaseType:
+    def _dominant_type(self, classifications: list[str]) -> PhaseType:
         counter = Counter(classifications)
         most_common_cat, most_common_count = counter.most_common(1)[0]
-        if most_common_count / len(classifications) < 0.4:
+        if (
+            most_common_count / len(classifications)
+            < self._calibrator.phase_dominance_min()
+        ):
             return PhaseType.MIXED
         return _CATEGORY_TO_PHASE.get(most_common_cat, PhaseType.MIXED)
 

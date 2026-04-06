@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 
+from analysis.calibration import load_calibrator
 from core.models import (
     Confidence,
     Evidence,
@@ -66,6 +67,7 @@ class IntentInferenceEngine:
     # ── Signal Gathering ─────────────────────────────────────────
 
     def _gather_signals(self, phase: Phase) -> dict[str, dict]:
+        calibrator = load_calibrator()
         commits = phase.commits
         m = phase.metrics
         pressure = PatternDetector.detect_pressure_signals(commits)
@@ -101,7 +103,7 @@ class IntentInferenceEngine:
         urgency_suppressed = (
             (pressure["impact_weight"] < 0.4 and pressure["cleanup_bias"] > 0.6)
             or (
-                temporal_urgency < 0.1
+                temporal_urgency < calibrator.temporal_signal_min()
                 and pressure["reactive_pressure"] < 0.15
             )
         )
@@ -123,8 +125,8 @@ class IntentInferenceEngine:
         signals["urgency_pressure"] = {
             "active": (
                 not urgency_suppressed
-                and temporal_urgency >= 0.1
-                and pressure_score > 0.35
+                and temporal_urgency >= calibrator.temporal_signal_min()
+                and pressure_score >= calibrator.urgency_signal_min()
                 and (len(commits) >= 2 or pressure["fix_pressure"] > 0.5)
                 and (
                     pressure["reactive_pressure"] > 0.15
@@ -247,7 +249,7 @@ class IntentInferenceEngine:
             )
             and not (
                 pressure["cleanup_bias"] >= 0.75
-                and temporal_urgency < 0.1
+                and temporal_urgency < calibrator.temporal_signal_min()
             ),
             "score": round(doc_commits / n, 3),
             "description": f"{doc_commits}/{len(commits)} commits are documentation-focused",
@@ -267,7 +269,7 @@ class IntentInferenceEngine:
                     pressure["impact_weight"] <= 0.55
                     or (
                         pressure["cleanup_bias"] >= 0.75
-                        and temporal_urgency < 0.1
+                        and temporal_urgency < calibrator.temporal_signal_min()
                     )
                 )
             ),
@@ -378,6 +380,7 @@ class IntentInferenceEngine:
     ) -> tuple[str, Confidence, float]:
         """Returns (summary, categorical confidence, numeric score)."""
         pressure = PatternDetector.detect_pressure_signals(phase.commits)
+        calibrator = load_calibrator()
         active = {name: s for name, s in signals.items() if s["active"]}
         count = len(active)
 
@@ -430,12 +433,12 @@ class IntentInferenceEngine:
             )
             if (
                 phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
-                and signals["urgency_pressure"]["score"] >= 0.5
+                and signals["urgency_pressure"]["score"] >= calibrator.urgency_boost_min()
             ):
                 confidence_score = max(confidence_score, 0.5)
             if (
                 phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
-                and signals["urgency_pressure"]["score"] >= 0.65
+                and signals["urgency_pressure"]["score"] >= calibrator.urgency_boost_high()
                 and "maintenance_cleanup" not in active
                 and "planned_resilience" not in active
             ):
@@ -467,7 +470,8 @@ class IntentInferenceEngine:
 
         if (
             phase.phase_type == PhaseType.REFACTOR
-            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.05
+            and pressure.get("temporal_urgency", pressure["burst_pressure"])
+            < calibrator.temporal_quiet_max()
             and pressure["reactive_ratio"] < 0.3
         ):
             confidence_score *= 0.92
@@ -477,13 +481,15 @@ class IntentInferenceEngine:
             and signals["maintenance_cleanup"]["active"]
             and pressure["alternation_score"] < 0.4
             and pressure["raw_alternation_score"] > pressure["alternation_score"]
-            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.1
+            and pressure.get("temporal_urgency", pressure["burst_pressure"])
+            < calibrator.temporal_signal_min()
         ):
             confidence_score = max(confidence_score, 0.45)
 
         if (
             phase.phase_type in {PhaseType.HOTFIX, PhaseType.BUGFIX}
-            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.1
+            and pressure.get("temporal_urgency", pressure["burst_pressure"])
+            < calibrator.temporal_signal_min()
             and (pressure["fix_diversity"] * pressure["impact_weight"]) < 0.3
         ):
             confidence_score *= 0.9
@@ -491,17 +497,18 @@ class IntentInferenceEngine:
         if (
             "maintenance_cleanup" in active
             and phase.phase_type != PhaseType.FEATURE
-            and pressure.get("temporal_urgency", pressure["burst_pressure"]) < 0.1
+            and pressure.get("temporal_urgency", pressure["burst_pressure"])
+            < calibrator.temporal_signal_min()
         ):
             confidence_score *= 0.8
 
         confidence_score = round(min(max(confidence_score, 0.0), 0.95), 3)
-        if confidence_score >= 0.7:
-            confidence = Confidence.HIGH
-        elif confidence_score >= 0.4:
-            confidence = Confidence.MEDIUM
-        else:
-            confidence = Confidence.LOW
+        confidence_bucket = calibrator.map_confidence(confidence_score)
+        confidence = {
+            "high": Confidence.HIGH,
+            "medium": Confidence.MEDIUM,
+            "low": Confidence.LOW,
+        }[confidence_bucket]
 
         m = phase.metrics
 
@@ -538,7 +545,7 @@ class IntentInferenceEngine:
                     PhaseType.DOCUMENTATION,
                     PhaseType.REFACTOR,
                 }
-                and signals["urgency_pressure"]["score"] < 0.35
+                and signals["urgency_pressure"]["score"] < calibrator.urgency_signal_min()
                 and pressure["cleanup_bias"] >= 0.7
             )
         )

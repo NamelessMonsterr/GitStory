@@ -13,7 +13,7 @@ from skills.intent_inference import IntentInferenceEngine
 from skills.risk_detection import RiskDetectionEngine
 from skills.transition_analysis import TransitionAnalysisEngine
 
-from analysis.calibration import percentile_calibrate
+from analysis.calibration import Calibrator, load_calibrator, percentile_calibrate
 from analysis.distribution import distribution_summary
 
 
@@ -100,14 +100,6 @@ def _phase_label(phase_type: PhaseType) -> str:
     return "cleanup"
 
 
-def _urgency_bucket(score: float) -> str:
-    if score >= 0.7:
-        return "high"
-    if score >= 0.4:
-        return "medium"
-    return "low"
-
-
 def _ordinal_score(label: str) -> int:
     return {"low": 0, "medium": 1, "high": 2}[label]
 
@@ -141,7 +133,23 @@ def spearman_corr(x: list[float], y: list[float]) -> float:
     return num / denom if denom else 0.0
 
 
-def evaluate(records: list[dict[str, Any]]) -> EvaluationResult:
+def _f1(precision: float, recall: float) -> float:
+    if precision + recall == 0:
+        return 0.0
+    return 2 * precision * recall / (precision + recall)
+
+
+def _repo_count(records: list[dict[str, Any]]) -> int:
+    repos = {str(record.get("repo", "")) for record in records}
+    repos.discard("")
+    return len(repos) if repos else 1
+
+
+def evaluate(
+    records: list[dict[str, Any]],
+    calibrator: Calibrator | None = None,
+) -> EvaluationResult:
+    calibrator = calibrator or load_calibrator()
     commits = build_commits(records)
     analysis = DeepHistoryAnalysis(commits=commits)
     phases = analysis.run()
@@ -159,7 +167,8 @@ def evaluate(records: list[dict[str, Any]]) -> EvaluationResult:
         pressure = PatternDetector.detect_pressure_signals(phase.commits)
         phase_pressures[phase.phase_number] = {
             "raw_urgency": pressure.get("temporal_urgency", pressure["burst_pressure"]),
-            "conflict": pressure.get("alternation_score", 0.0) >= 0.4,
+            "conflict": pressure.get("alternation_score", 0.0)
+            >= calibrator.conflict_threshold(),
         }
         for commit in phase.commits:
             commit_to_phase[commit.hash] = _phase_label(phase.phase_type)
@@ -188,7 +197,7 @@ def evaluate(records: list[dict[str, Any]]) -> EvaluationResult:
         if predicted_phase == record["phase"]:
             phase_matches += 1
 
-        predicted_urgency = _urgency_bucket(commit_to_urgency[commit_id])
+        predicted_urgency = calibrator.map_urgency(commit_to_urgency[commit_id])
         if predicted_urgency == record["urgency"]:
             urgency_matches += 1
 
@@ -214,6 +223,7 @@ def evaluate(records: list[dict[str, Any]]) -> EvaluationResult:
         if conflict_tp + conflict_fn
         else 0.0
     )
+    conflict_f1 = _f1(conflict_precision, conflict_recall)
 
     metrics = {
         "phase_accuracy": round(phase_matches / total, 3),
@@ -221,11 +231,13 @@ def evaluate(records: list[dict[str, Any]]) -> EvaluationResult:
         "urgency_spearman": round(spearman_corr(y_true, y_pred), 3),
         "conflict_precision": round(conflict_precision, 3),
         "conflict_recall": round(conflict_recall, 3),
+        "conflict_f1": round(conflict_f1, 3),
         "phase_fragmentation": round(
             len(phases) / max(1.0, len(commits) ** 0.5), 3
         ),
         "phase_count": len(phases),
         "commit_count": len(commits),
+        "repo_count": _repo_count(records),
     }
 
     distribution = distribution_summary(

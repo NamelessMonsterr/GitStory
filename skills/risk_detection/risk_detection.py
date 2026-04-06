@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 
+from analysis.calibration import load_calibrator
 from core.models import (
     Phase,
     PhaseType,
@@ -63,6 +64,7 @@ class RiskDetectionEngine:
         m = phase.metrics
         commits = phase.commits
         pressure = PatternDetector.detect_pressure_signals(commits)
+        calibrator = load_calibrator()
         temporal_urgency = pressure.get("temporal_urgency", pressure["burst_pressure"])
         idx = start_id
 
@@ -78,7 +80,7 @@ class RiskDetectionEngine:
             )
             and (
                 pressure["high_frequency"] > 0.3
-                or temporal_urgency > 0.25
+                or temporal_urgency > calibrator.temporal_hotfix_min()
             )
             and (
                 pressure["fix_diversity"] >= 0.5
@@ -96,7 +98,7 @@ class RiskDetectionEngine:
                 pressure["reactive_pressure"] >= pressure["proactive_pressure"]
                 or (
                     pressure["implicit_fix_density"] >= 0.30
-                    and temporal_urgency >= 0.45
+                    and temporal_urgency >= calibrator.temporal_hotfix_high()
                 )
                 or (
                     pressure["buglike_density"] >= 0.90
@@ -109,7 +111,10 @@ class RiskDetectionEngine:
             level = (
                 RiskLevel.CRITICAL
                 if pressure["reactive_pressure"] > 0.35
-                and (m.commit_frequency_per_day > 5 or temporal_urgency > 0.4)
+                and (
+                    m.commit_frequency_per_day > 5
+                    or temporal_urgency > calibrator.temporal_hotfix_high()
+                )
                 else RiskLevel.HIGH
             )
             risks.append(
