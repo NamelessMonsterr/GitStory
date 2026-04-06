@@ -16,6 +16,7 @@ import statistics
 from collections import Counter
 from datetime import timedelta
 from pathlib import PurePosixPath
+from typing import TypedDict
 
 from .models import Commit
 
@@ -133,6 +134,56 @@ _CONFLICT_TRANSITION_WEIGHTS = {
     frozenset({"bug", "maintenance"}): 0.65,
     frozenset({"feature", "maintenance"}): 0.30,
 }
+
+
+class FixSemantics(TypedDict):
+    fix_density: float
+    semantic_fix_density: float
+    implicit_fix_density: float
+    buglike_density: float
+    fix_diversity: float
+    cleanup_fix_ratio: float
+    fix_coherence: float
+    cleanup_context_counts: dict[str, int]
+    semantic_alignment: float
+    impact_weight: float
+    cleanup_fix_commits: int
+    reactive_ratio: float
+    proactive_ratio: float
+    alternation_score: float
+    conflict_alternation_score: float
+    proactive_resilience_density: float
+
+
+class PressureSignals(TypedDict):
+    short_messages: float
+    high_frequency: float
+    late_night_ratio: float
+    late_night_available: bool
+    fix_density: float
+    fix_diversity: float
+    fix_pressure: float
+    semantic_alignment: float
+    semantic_fix_density: float
+    implicit_fix_density: float
+    fix_coherence: float
+    cleanup_bias: float
+    cleanup_fix_ratio: float
+    impact_weight: float
+    buglike_density: float
+    cleanup_fix_commits: int
+    reactive_ratio: float
+    proactive_ratio: float
+    burst_pressure: float
+    raw_burst_pressure: float
+    temporal_urgency: float
+    compression_ratio: float
+    alternation_score: float
+    raw_alternation_score: float
+    reactive_pressure: float
+    proactive_pressure: float
+    proactive_resilience_density: float
+    implicit_reactive_boost: float
 
 
 def _keyword_score(words: set[str], keyword_bank: frozenset[str]) -> int:
@@ -480,7 +531,7 @@ class PatternDetector:
     @staticmethod
     def phase_fix_semantics(
         commits: list[Commit],
-    ) -> dict[str, float | dict[str, int]]:
+    ) -> FixSemantics:
         total_commits = max(len(commits), 1)
         fix_like_commits = 0
         semantic_fix_commits = 0
@@ -719,7 +770,7 @@ class PatternDetector:
     # ── Pressure Signal Detection ────────────────────────────────
 
     @staticmethod
-    def detect_pressure_signals(commits: list[Commit]) -> dict[str, float | bool]:
+    def detect_pressure_signals(commits: list[Commit]) -> PressureSignals:
         """Return pressure-indicator scores (each 0.0–1.0).
 
         FIX v1.3: Midnight (hour=0) is now correctly counted as late-night.
@@ -791,7 +842,7 @@ class PatternDetector:
             late_ratio = 0.0
             late_night_available = False
 
-        semantics = PatternDetector.phase_fix_semantics(commits)
+        semantics: FixSemantics = PatternDetector.phase_fix_semantics(commits)
         burst_pressure, compression_ratio = _burst_metrics(commits)
         fix_ratio = semantics["fix_density"]
         fix_diversity = semantics["fix_diversity"]

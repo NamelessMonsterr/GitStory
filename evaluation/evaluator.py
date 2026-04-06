@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from core.models import Commit, FileChange, PhaseType
 from core.pattern_detector import PatternDetector
@@ -100,8 +100,8 @@ def _phase_label(phase_type: PhaseType) -> str:
     return "cleanup"
 
 
-def _ordinal_score(label: str) -> int:
-    return {"low": 0, "medium": 1, "high": 2}[label]
+def _ordinal_score(label: str) -> float:
+    return float({"low": 0, "medium": 1, "high": 2}[label])
 
 
 def _rank(values: list[float]) -> list[float]:
@@ -119,11 +119,11 @@ def _rank(values: list[float]) -> list[float]:
     return ranks
 
 
-def spearman_corr(x: list[float], y: list[float]) -> float:
+def spearman_corr(x: Sequence[float], y: Sequence[float]) -> float:
     if len(x) < 2:
         return 0.0
-    rx = _rank(x)
-    ry = _rank(y)
+    rx = _rank(list(x))
+    ry = _rank(list(y))
     mean_x = sum(rx) / len(rx)
     mean_y = sum(ry) / len(ry)
     num = sum((a - mean_x) * (b - mean_y) for a, b in zip(rx, ry))
@@ -187,8 +187,8 @@ def evaluate(
     # Metrics
     phase_matches = 0
     urgency_matches = 0
-    y_true = []
-    y_pred = []
+    y_true: list[float] = []
+    y_pred: list[float] = []
     conflict_tp = conflict_fp = conflict_fn = 0
 
     for record in records:
