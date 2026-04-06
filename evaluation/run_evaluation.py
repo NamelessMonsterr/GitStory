@@ -30,6 +30,10 @@ def main() -> None:
         "metrics": report.metrics,
         "distribution": report.distribution,
         "raw": report.raw,
+        "dataset": {
+            "record_count": report.metrics.get("commit_count", 0),
+            "repo_count": report.metrics.get("repo_count", 0),
+        },
     }
     print(json.dumps(payload, indent=2))
     if args.output:

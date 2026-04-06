@@ -36,6 +36,8 @@ def test_evaluation_metrics_shape() -> None:
     assert "phase_accuracy" in metrics
     assert "urgency_match_rate" in metrics
     assert "conflict_precision" in metrics
+    assert "conflict_f1" in metrics
     assert 0.0 <= metrics["phase_accuracy"] <= 1.0
     assert 0.0 <= metrics["urgency_match_rate"] <= 1.0
     assert 0.0 <= metrics["conflict_precision"] <= 1.0
+    assert 0.0 <= metrics["conflict_f1"] <= 1.0

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from analysis.calibration import percentile_calibrate
+from analysis.calibration import load_calibrator, percentile_calibrate
 
 
 def test_percentile_calibrate_monotonic() -> None:
@@ -13,3 +13,10 @@ def test_percentile_calibrate_monotonic() -> None:
 
 def test_percentile_calibrate_empty() -> None:
     assert percentile_calibrate([]) == []
+
+
+def test_calibrator_maps_using_config() -> None:
+    calibrator = load_calibrator()
+    assert calibrator.map_urgency(0.1) == "low"
+    assert calibrator.map_urgency(0.6) in {"medium", "high"}
+    assert calibrator.map_confidence(0.8) == "high"
