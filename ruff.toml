@@ -1,0 +1,9 @@
+target-version = "py39"
+line-length = 100
+
+[lint]
+select = ["F"]
+ignore = ["F401"]
+
+[lint.per-file-ignores]
+"tests/*" = ["F401"]

@@ -1,0 +1,62 @@
+[
+  {
+    "commit_id": "c001",
+    "message": "add checkout flow",
+    "phase": "feature",
+    "urgency": "medium",
+    "conflict": false,
+    "timestamp": "2024-01-01T10:00:00Z",
+    "author": "alice",
+    "files": [
+      { "path": "src/checkout.py", "additions": 40, "deletions": 2, "status": "M" }
+    ]
+  },
+  {
+    "commit_id": "c002",
+    "message": "fix payment timeout",
+    "phase": "bugfix",
+    "urgency": "high",
+    "conflict": true,
+    "timestamp": "2024-01-01T11:00:00Z",
+    "author": "alice",
+    "files": [
+      { "path": "src/payment.py", "additions": 4, "deletions": 12, "status": "M" }
+    ]
+  },
+  {
+    "commit_id": "c003",
+    "message": "fix lint warnings",
+    "phase": "cleanup",
+    "urgency": "low",
+    "conflict": false,
+    "timestamp": "2024-01-01T12:00:00Z",
+    "author": "alice",
+    "files": [
+      { "path": "src/app.py", "additions": 2, "deletions": 2, "status": "M" }
+    ]
+  },
+  {
+    "commit_id": "c004",
+    "message": "refactor auth module",
+    "phase": "refactor",
+    "urgency": "low",
+    "conflict": false,
+    "timestamp": "2024-01-01T13:00:00Z",
+    "author": "bob",
+    "files": [
+      { "path": "src/auth.py", "additions": 10, "deletions": 25, "status": "M" }
+    ]
+  },
+  {
+    "commit_id": "c005",
+    "message": "handle null pointer in checkout",
+    "phase": "bugfix",
+    "urgency": "medium",
+    "conflict": true,
+    "timestamp": "2024-01-01T14:00:00Z",
+    "author": "bob",
+    "files": [
+      { "path": "src/checkout.py", "additions": 3, "deletions": 6, "status": "M" }
+    ]
+  }
+]

@@ -1,0 +1,7 @@
+exclude_dirs:
+  - tests
+  - .github
+  - .pytest_cache
+  - __pycache__
+skips:
+  - B101
