@@ -161,7 +161,7 @@ def evaluate(
     commit_to_phase: dict[str, str] = {}
     commit_to_conflict: dict[str, bool] = {}
     commit_to_urgency: dict[str, float] = {}
-    phase_pressures: dict[int, dict[str, float]] = {}
+    phase_pressures: dict[int, dict[str, float | bool]] = {}
 
     for phase in phases:
         pressure = PatternDetector.detect_pressure_signals(phase.commits)
