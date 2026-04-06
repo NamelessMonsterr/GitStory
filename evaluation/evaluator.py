@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, TypedDict
 
 from core.models import Commit, FileChange, PhaseType
 from core.pattern_detector import PatternDetector
@@ -27,6 +27,11 @@ class EvaluationResult:
     metrics: dict[str, Any]
     distribution: dict[str, Any]
     raw: dict[str, Any]
+
+
+class PhasePressure(TypedDict):
+    raw_urgency: float
+    conflict: bool
 
 
 def load_labeled(path: str | Path) -> list[dict[str, Any]]:
@@ -161,7 +166,7 @@ def evaluate(
     commit_to_phase: dict[str, str] = {}
     commit_to_conflict: dict[str, bool] = {}
     commit_to_urgency: dict[str, float] = {}
-    phase_pressures: dict[int, dict[str, float | bool]] = {}
+    phase_pressures: dict[int, PhasePressure] = {}
 
     for phase in phases:
         pressure = PatternDetector.detect_pressure_signals(phase.commits)
