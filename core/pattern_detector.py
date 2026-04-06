@@ -155,6 +155,24 @@ class FixSemantics(TypedDict):
     proactive_resilience_density: float
 
 
+class FixContext(TypedDict):
+    dominant: str
+    scores: dict[str, int]
+    impact_weight: float
+    product_like_paths: int
+    area_keys: list[str]
+    product_fix_candidate: bool
+    cleanup_fix_candidate: bool
+    implicit_bug_candidate: bool
+    implicit_bug_strength: float
+    implicit_bug_indicators: list[str]
+    explicit_bug_hits: int
+    reactive_score: float
+    proactive_score: float
+    bug_reactivity: str
+    bug_signal_strength: float
+
+
 class PressureSignals(TypedDict):
     short_messages: float
     high_frequency: float
@@ -420,7 +438,7 @@ class PatternDetector:
         return _conflict_alternation_ratio(labels)
 
     @staticmethod
-    def fix_context(commit: Commit) -> dict[str, object]:
+    def fix_context(commit: Commit) -> FixContext:
         """Infer whether a fix-like commit is product-facing or cleanup-oriented."""
         words = _tokenize_message(commit.message)
         explicit_bug_hits = _keyword_score(words, _BUGFIX_KEYWORDS)
