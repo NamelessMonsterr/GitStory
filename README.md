@@ -229,8 +229,4 @@ It is a repository reasoning tool:
 - Git CLI available on `PATH`
 - Local repository access or piped `git log` input
 
----
 
-## License
-
-MIT
