@@ -807,6 +807,7 @@ class PatternDetector:
                 "reactive_pressure": 0.0,
                 "proactive_pressure": 0.0,
                 "proactive_resilience_density": 0.0,
+                "implicit_reactive_boost": 0.0,
             }
 
         n = len(commits)
