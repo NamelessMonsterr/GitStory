@@ -1,6 +1,7 @@
 [
   {
     "commit_id": "c001",
+    "repo": "sample/repo",
     "message": "add checkout flow",
     "phase": "feature",
     "urgency": "medium",
@@ -13,6 +14,7 @@
   },
   {
     "commit_id": "c002",
+    "repo": "sample/repo",
     "message": "fix payment timeout",
     "phase": "bugfix",
     "urgency": "high",
@@ -25,6 +27,7 @@
   },
   {
     "commit_id": "c003",
+    "repo": "sample/repo",
     "message": "fix lint warnings",
     "phase": "cleanup",
     "urgency": "low",
@@ -37,6 +40,7 @@
   },
   {
     "commit_id": "c004",
+    "repo": "sample/repo",
     "message": "refactor auth module",
     "phase": "refactor",
     "urgency": "low",
@@ -49,6 +53,7 @@
   },
   {
     "commit_id": "c005",
+    "repo": "sample/repo",
     "message": "handle null pointer in checkout",
     "phase": "bugfix",
     "urgency": "medium",

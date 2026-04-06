@@ -42,6 +42,12 @@ jobs:
       - name: Run master test runner
         run: python tests/run_all_tests.py
 
+      - name: Run evaluation
+        run: python run_evaluation.py --dataset data/labeled/sample_labeled_data.json --output evaluation_report.json
+
+      - name: Regression guard
+        run: python -m evaluation.regression_guard --dataset data/labeled/sample_labeled_data.json --baseline config/baseline_metrics.json
+
       - name: Smoke CLI help
         run: |
           python main.py --help

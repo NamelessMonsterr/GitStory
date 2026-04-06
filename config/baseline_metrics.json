@@ -1,0 +1,23 @@
+{
+  "metrics": {
+    "phase_accuracy": 0.4,
+    "urgency_match_rate": 0.4,
+    "urgency_spearman": 0.0,
+    "conflict_precision": 0.4,
+    "conflict_recall": 1.0,
+    "conflict_f1": 0.571
+  },
+  "tolerance": {
+    "phase_accuracy": 0.02,
+    "urgency_match_rate": 0.02,
+    "urgency_spearman": 0.02,
+    "conflict_precision": 0.02,
+    "conflict_recall": 0.02,
+    "conflict_f1": 0.02
+  },
+  "dataset": {
+    "warn_repos": 10,
+    "soft_fail_repos": 20,
+    "unstable_repos": 30
+  }
+}

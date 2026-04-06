@@ -17,6 +17,7 @@
         "enum": ["low", "medium", "high"]
       },
       "conflict": { "type": "boolean" },
+      "repo": { "type": "string" },
       "timestamp": { "type": "string" },
       "author": { "type": "string" },
       "email": { "type": "string" },

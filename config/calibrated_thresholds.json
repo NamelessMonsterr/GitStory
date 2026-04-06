@@ -1,0 +1,27 @@
+{
+  "urgency": {
+    "signal_min": 0.35,
+    "boost_min": 0.5,
+    "boost_high": 0.65,
+    "medium_min": 0.4,
+    "high_min": 0.7,
+    "critical_min": 0.9
+  },
+  "confidence": {
+    "medium_min": 0.4,
+    "high_min": 0.7
+  },
+  "conflict": {
+    "alternation_min": 0.4
+  },
+  "temporal_urgency": {
+    "signal_min": 0.1,
+    "quiet_max": 0.05,
+    "hotfix_min": 0.25,
+    "hotfix_high": 0.45,
+    "initial_max": 0.25
+  },
+  "phase": {
+    "dominant_ratio_min": 0.4
+  }
+}
